@@ -32,9 +32,9 @@ class SendMailWorker(
 
         val settingsRepo = SettingsRepository(applicationContext)
         val apiKey = settingsRepo.apiKey.first()
-        val from = settingsRepo.senderEmail.first()
+        val from = settingsRepo.effectiveSenderEmail.first()
 
-        if (apiKey.isBlank() || from.isBlank()) return Result.failure()
+        if (apiKey.isBlank()) return Result.failure()
 
         val result = ResendApi.sendEmail(
             apiKey = apiKey,

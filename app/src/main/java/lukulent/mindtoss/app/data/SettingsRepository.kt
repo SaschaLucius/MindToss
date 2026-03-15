@@ -22,10 +22,15 @@ class SettingsRepository(private val context: Context) {
         val FETCH_TITLE = booleanPreferencesKey("fetch_title")
         val THEME = stringPreferencesKey("theme")
         val DRAFT = stringPreferencesKey("draft")
+        const val DEFAULT_SENDER = "onboarding@resend.dev"
     }
 
     val apiKey: Flow<String> = context.dataStore.data.map { it[API_KEY] ?: "" }
     val senderEmail: Flow<String> = context.dataStore.data.map { it[SENDER_EMAIL] ?: "" }
+    val effectiveSenderEmail: Flow<String> = context.dataStore.data.map {
+        val value = it[SENDER_EMAIL] ?: ""
+        value.ifBlank { DEFAULT_SENDER }
+    }
     val noteRecipient: Flow<String> = context.dataStore.data.map { it[NOTE_RECIPIENT] ?: "" }
     val taskRecipient: Flow<String> = context.dataStore.data.map { it[TASK_RECIPIENT] ?: "" }
     val fetchTitle: Flow<Boolean> = context.dataStore.data.map { it[FETCH_TITLE] ?: false }

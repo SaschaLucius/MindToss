@@ -82,11 +82,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (text.isBlank()) return@launch
 
             val apiKey = settingsRepo.apiKey.first()
-            val senderEmail = settingsRepo.senderEmail.first()
+            val senderEmail = settingsRepo.effectiveSenderEmail.first()
             val noteRecipient = settingsRepo.noteRecipient.first()
             val taskRecip = settingsRepo.taskRecipient.first()
 
-            if (apiKey.isBlank() || senderEmail.isBlank() || noteRecipient.isBlank()) {
+            if (apiKey.isBlank() || noteRecipient.isBlank()) {
                 _error.value = "Bitte konfiguriere zuerst die Resend-Einstellungen"
                 return@launch
             }
@@ -103,7 +103,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             val lines = text.lines()
             val subject = lines.first()
-            val body = if (lines.size > 1) lines.drop(1).joinToString("\n") else ""
+            val body = if (lines.size > 1) lines.drop(1).joinToString("\n").trim() else subject
 
             if (isOnline()) {
                 _isSending.value = true

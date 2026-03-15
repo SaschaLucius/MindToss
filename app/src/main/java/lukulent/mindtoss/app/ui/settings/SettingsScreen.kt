@@ -121,6 +121,8 @@ fun SettingsScreen(
                     value = senderEmail,
                     onValueChange = { viewModel.updateSenderEmail(it) },
                     label = { Text("Absender-E-Mail") },
+                    placeholder = { Text("onboarding@resend.dev") },
+                    supportingText = { Text("Leer lassen für Resend-Default") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )

@@ -63,13 +63,13 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun resendHistoryEntry(entry: HistoryEntry) {
         viewModelScope.launch {
             val apiKeyVal = apiKey.first()
-            val senderVal = senderEmail.first()
+            val senderVal = settingsRepo.effectiveSenderEmail.first()
             val recipient = when (entry.type) {
                 MessageType.NOTE -> noteRecipient.first()
                 MessageType.TASK -> taskRecipient.first()
             }
 
-            if (apiKeyVal.isBlank() || senderVal.isBlank() || recipient.isBlank()) {
+            if (apiKeyVal.isBlank() || recipient.isBlank()) {
                 _message.emit("Fehlende Konfiguration")
                 return@launch
             }
