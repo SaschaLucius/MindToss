@@ -8,3 +8,6 @@ url: ""
 baseurl: ""
 
 markdown: kramdown
+
+sass:
+  sass_dir: _sass
