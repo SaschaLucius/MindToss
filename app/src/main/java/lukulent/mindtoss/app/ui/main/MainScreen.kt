@@ -30,8 +30,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -39,6 +41,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -58,6 +62,7 @@ fun MainScreen(
     val error by viewModel.error.collectAsStateWithLifecycle()
     val hasPendingWork by viewModel.hasPendingWork.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val clipboardManager = LocalClipboardManager.current
 
     val voiceLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -85,7 +90,15 @@ fun MainScreen(
 
     LaunchedEffect(error) {
         error?.let {
-            snackbarHostState.showSnackbar(it)
+            val result = snackbarHostState.showSnackbar(
+                message = it,
+                actionLabel = "Kopieren",
+                withDismissAction = true,
+                duration = SnackbarDuration.Indefinite,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                clipboardManager.setText(AnnotatedString(it))
+            }
             viewModel.clearError()
         }
     }
