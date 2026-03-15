@@ -6,20 +6,20 @@
 
 ## 1. Projektübersicht
 
-|                      |                                          |
-| -------------------- | ---------------------------------------- |
-| **App-Name**         | MindToss                                 |
-| **Package**          | `lukulent.mindtoss.app`                  |
-| **Plattform**        | Android (min. API 26, target API 35)     |
-| **Sprache**          | Kotlin 2.1.0                             |
+|                      |                                             |
+| -------------------- | ------------------------------------------- |
+| **App-Name**         | MindToss                                    |
+| **Package**          | `lukulent.mindtoss.app`                     |
+| **Plattform**        | Android (min. API 26, target API 35)        |
+| **Sprache**          | Kotlin 2.1.0                                |
 | **UI-Framework**     | Jetpack Compose (BOM 2024.10.00, Material3) |
-| **HTTP-Client**      | Ktor 3.0.3 (OkHttp Engine)              |
-| **Lokaler Speicher** | DataStore Preferences                    |
-| **Offline-Queue**    | WorkManager 2.10.0 (Jetpack Library)     |
-| **Serialisierung**   | kotlinx.serialization 1.7.3              |
-| **Mail-Service**     | Resend REST API v1 (Plain Text)          |
-| **Build-Tool**       | Gradle 8.9 / AGP 8.7.3                  |
-| **Repository**       | GitHub (Open Source)                     |
+| **HTTP-Client**      | Ktor 3.0.3 (OkHttp Engine)                  |
+| **Lokaler Speicher** | DataStore Preferences                       |
+| **Offline-Queue**    | WorkManager 2.10.0 (Jetpack Library)        |
+| **Serialisierung**   | kotlinx.serialization 1.7.3                 |
+| **Mail-Service**     | Resend REST API v1 (Plain Text)             |
+| **Build-Tool**       | Gradle 8.9 / AGP 8.7.3                      |
+| **Repository**       | GitHub (Open Source)                        |
 
 ---
 

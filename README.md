@@ -69,32 +69,32 @@ git push origin v1.0.0
 
 ### Benötigte GitHub Secrets
 
-| Secret | Beschreibung |
-|--------|-------------|
-| `KEYSTORE_BASE64` | Base64-kodierter Keystore (`base64 -i keystore.jks`) |
-| `KEYSTORE_PASSWORD` | Keystore-Passwort |
-| `KEY_ALIAS` | Key-Alias |
-| `KEY_PASSWORD` | Key-Passwort |
+| Secret              | Beschreibung                                         |
+| ------------------- | ---------------------------------------------------- |
+| `KEYSTORE_BASE64`   | Base64-kodierter Keystore (`base64 -i keystore.jks`) |
+| `KEYSTORE_PASSWORD` | Keystore-Passwort                                    |
+| `KEY_ALIAS`         | Key-Alias                                            |
+| `KEY_PASSWORD`      | Key-Passwort                                         |
 
 ## Architektur
 
-| Schicht | Technologie |
-|---------|------------|
-| UI | Jetpack Compose, Material Design 3 |
-| State Management | MVVM mit Jetpack ViewModels |
-| Lokaler Speicher | DataStore Preferences |
-| HTTP | Ktor Client |
-| Mail-Service | Resend REST API |
-| Offline-Queue | WorkManager |
-| Serialisierung | kotlinx.serialization |
+| Schicht          | Technologie                        |
+| ---------------- | ---------------------------------- |
+| UI               | Jetpack Compose, Material Design 3 |
+| State Management | MVVM mit Jetpack ViewModels        |
+| Lokaler Speicher | DataStore Preferences              |
+| HTTP             | Ktor Client                        |
+| Mail-Service     | Resend REST API                    |
+| Offline-Queue    | WorkManager                        |
+| Serialisierung   | kotlinx.serialization              |
 
 ## Mail-Format
 
-| Feld | Wert |
-|------|------|
-| Format | Plain Text |
+| Feld    | Wert                   |
+| ------- | ---------------------- |
+| Format  | Plain Text             |
 | Betreff | Erste Zeile des Textes |
-| Body | Alle weiteren Zeilen |
+| Body    | Alle weiteren Zeilen   |
 
 ## Lizenz
 
