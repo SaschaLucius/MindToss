@@ -7,9 +7,12 @@ import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -24,14 +27,15 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val settingsRepo = SettingsRepository(application)
     private val historyRepo = HistoryRepository(application)
 
-    val apiKey = settingsRepo.apiKey
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
-    val senderEmail = settingsRepo.senderEmail
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
-    val noteRecipient = settingsRepo.noteRecipient
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
-    val taskRecipient = settingsRepo.taskRecipient
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    private val _apiKey = MutableStateFlow("")
+    val apiKey: StateFlow<String> = _apiKey.asStateFlow()
+    private val _senderEmail = MutableStateFlow("")
+    val senderEmail: StateFlow<String> = _senderEmail.asStateFlow()
+    private val _noteRecipient = MutableStateFlow("")
+    val noteRecipient: StateFlow<String> = _noteRecipient.asStateFlow()
+    private val _taskRecipient = MutableStateFlow("")
+    val taskRecipient: StateFlow<String> = _taskRecipient.asStateFlow()
+
     val fetchTitle = settingsRepo.fetchTitle
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val theme = settingsRepo.theme
@@ -39,13 +43,34 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val history = historyRepo.history
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    init {
+        viewModelScope.launch {
+            _apiKey.value = settingsRepo.apiKey.first()
+            _senderEmail.value = settingsRepo.senderEmail.first()
+            _noteRecipient.value = settingsRepo.noteRecipient.first()
+            _taskRecipient.value = settingsRepo.taskRecipient.first()
+        }
+    }
+
     private val _message = MutableSharedFlow<String>()
     val message: SharedFlow<String> = _message.asSharedFlow()
 
-    fun updateApiKey(value: String) = viewModelScope.launch { settingsRepo.setApiKey(value) }
-    fun updateSenderEmail(value: String) = viewModelScope.launch { settingsRepo.setSenderEmail(value) }
-    fun updateNoteRecipient(value: String) = viewModelScope.launch { settingsRepo.setNoteRecipient(value) }
-    fun updateTaskRecipient(value: String) = viewModelScope.launch { settingsRepo.setTaskRecipient(value) }
+    fun updateApiKey(value: String) {
+        _apiKey.value = value
+        viewModelScope.launch { settingsRepo.setApiKey(value) }
+    }
+    fun updateSenderEmail(value: String) {
+        _senderEmail.value = value
+        viewModelScope.launch { settingsRepo.setSenderEmail(value) }
+    }
+    fun updateNoteRecipient(value: String) {
+        _noteRecipient.value = value
+        viewModelScope.launch { settingsRepo.setNoteRecipient(value) }
+    }
+    fun updateTaskRecipient(value: String) {
+        _taskRecipient.value = value
+        viewModelScope.launch { settingsRepo.setTaskRecipient(value) }
+    }
     fun updateFetchTitle(value: Boolean) = viewModelScope.launch { settingsRepo.setFetchTitle(value) }
     fun updateTheme(value: String) = viewModelScope.launch { settingsRepo.setTheme(value) }
 

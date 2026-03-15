@@ -28,8 +28,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val settingsRepo = SettingsRepository(application)
     private val historyRepo = HistoryRepository(application)
 
-    val draftText = settingsRepo.draft
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    private val _draftText = MutableStateFlow("")
+    val draftText: StateFlow<String> = _draftText.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            _draftText.value = settingsRepo.draft.first()
+        }
+        // Pick up external draft changes (e.g. share intent)
+        viewModelScope.launch {
+            settingsRepo.draft.collect { stored ->
+                if (stored != _draftText.value) {
+                    _draftText.value = stored
+                }
+            }
+        }
+    }
 
     val taskRecipient = settingsRepo.taskRecipient
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
@@ -59,15 +73,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateDraft(text: String) {
+        _draftText.value = text
         viewModelScope.launch {
             settingsRepo.setDraft(text)
         }
     }
 
     fun appendToDraft(text: String) {
+        val current = _draftText.value
+        val newText = if (current.isBlank()) text else "$current\n$text"
+        _draftText.value = newText
         viewModelScope.launch {
-            val current = draftText.value
-            val newText = if (current.isBlank()) text else "$current\n$text"
             settingsRepo.setDraft(newText)
         }
     }
@@ -129,6 +145,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         )
                     )
                     settingsRepo.setDraft("")
+                    _draftText.value = ""
                     _sendSuccess.emit(Unit)
                 } else {
                     _error.value = result.exceptionOrNull()?.message ?: "Unbekannter Fehler"
@@ -143,6 +160,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     messageType = type,
                 )
                 settingsRepo.setDraft("")
+                _draftText.value = ""
                 _queued.emit(Unit)
             }
         }
