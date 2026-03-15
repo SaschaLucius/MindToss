@@ -9,13 +9,16 @@
 |                      |                                          |
 | -------------------- | ---------------------------------------- |
 | **App-Name**         | MindToss                                 |
-| **Plattform**        | Android (min. API 26 / Android 8.0 Oreo) |
-| **Sprache**          | Kotlin                                   |
-| **UI-Framework**     | Jetpack Compose                          |
-| **HTTP-Client**      | Ktor                                     |
-| **Lokaler Speicher** | DataStore                                |
-| **Mail-Service**     | Resend API (REST, Plain Text)            |
-| **Build-Tool**       | Gradle                                   |
+| **Package**          | `lukulent.mindtoss.app`                  |
+| **Plattform**        | Android (min. API 26, target API 35)     |
+| **Sprache**          | Kotlin 2.1.0                             |
+| **UI-Framework**     | Jetpack Compose (BOM 2024.10.00, Material3) |
+| **HTTP-Client**      | Ktor 3.0.3 (OkHttp Engine)              |
+| **Lokaler Speicher** | DataStore Preferences                    |
+| **Offline-Queue**    | WorkManager 2.10.0 (Jetpack Library)     |
+| **Serialisierung**   | kotlinx.serialization 1.7.3              |
+| **Mail-Service**     | Resend REST API v1 (Plain Text)          |
+| **Build-Tool**       | Gradle 8.9 / AGP 8.7.3                  |
 | **Repository**       | GitHub (Open Source)                     |
 
 ---
@@ -38,7 +41,7 @@ Der Nutzer öffnet MindToss, tippt oder spricht einen Gedanken, drückt Senden �
 - Task-Button wird **versteckt**, wenn keine zweite Mail-Adresse konfiguriert ist
 - Nach erfolgreichem Senden: **App schließt sich automatisch**, keine Meldung
 - Bei Fehler: **Fehlermeldung anzeigen**, App bleibt offen
-- **Auto-Save Draft:** Inhalt wird automatisch gespeichert beim Wechsel zu Settings oder beim Schließen der App
+- **Auto-Save Draft:** Inhalt wird kontinuierlich in DataStore gespeichert (bei jeder Änderung)
 
 ### 3.2 Settings Screen
 
@@ -46,7 +49,7 @@ Erreichbar über Icon im Main Screen.
 
 **Resend Konfiguration**
 
-- Resend API-Key
+- Resend API-Key (Eingabe maskiert, ein-/ausblendbar)
 - Absender-E-Mail (z.B. `notes@meinedomain.de`)
 
 **Empfänger**
@@ -83,8 +86,8 @@ Erreichbar über Icon im Main Screen.
 
 ## 5. Android Share Target
 
-- MindToss erscheint im nativen Android „Teilen"-Menü
-- Empfängt: Text, Links, gemischten Inhalt
+- MindToss erscheint im nativen Android „Teilen"-Menü (via `ACTION_SEND` Intent-Filter)
+- Empfängt: `text/plain` – Text, Links, gemischten Inhalt
 - **Bei Links** (wenn Toggle aktiv): Seiten-Titel wird automatisch abgerufen und über den Link eingefügt
 - **Bei gemischtem Inhalt** (Text + Link): Erste Zeile = Betreff, restlicher Inhalt = Body; Titel-Fetch gilt nur für Links im Body
 
@@ -93,8 +96,10 @@ Erreichbar über Icon im Main Screen.
 ## 6. Offline-Verhalten
 
 - Wenn kein Internet verfügbar: Nachricht wird in eine **Offline-Queue** gelegt
+- Technologie: **WorkManager** (Jetpack Library, `androidx.work`) mit `NetworkType.CONNECTED` Constraint
+- Retry-Strategie: Exponential Backoff (ab 30 Sekunden)
 - Sobald Internet wieder verfügbar: automatisch senden
-- Nutzer sieht visuell, dass die Nachricht in der Queue wartet
+- Nutzer sieht visuell (Badge in der TopBar), dass Nachrichten in der Queue warten
 
 ---
 
@@ -103,6 +108,7 @@ Erreichbar über Icon im Main Screen.
 - **Minimalistisch & schlicht**
 - Unterstützt **System / Hell / Dunkel** (konfigurierbar in Settings)
 - Folgt Material Design 3
+- Nutzt **Dynamic Color** auf Android 12+ (Material You), Fallback auf eigenes Farbschema
 
 ---
 
@@ -112,9 +118,11 @@ Erreichbar über Icon im Main Screen.
 - APK wird mit einem **eigenen Release-Key** signiert
 - Key wird als **GitHub Secret** hinterlegt (nie im Repository)
 - **GitHub Actions Workflow:**
-- Trigger: **Git Tag** (z.B. `v1.0.0`)
-- Schritte: Build → Sign → Upload als GitHub Release
+  - Trigger: **Git Tag** (z.B. `v1.0.0`)
+  - Schritte: Build → Sign → Upload als GitHub Release
+  - Secrets: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`
 - **Lokales Bauen:** via `./gradlew assembleRelease` / `./gradlew assembleDebug` – einfach, ohne extra Schritte
+- **Voraussetzung:** Android Studio (bringt JDK 17 und Android SDK mit)
 
 ---
 
