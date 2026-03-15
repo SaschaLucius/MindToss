@@ -197,7 +197,20 @@ fun SettingsScreen(
             }
 
             // --- History ---
-            item { SectionHeader("Historie") }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                ) {
+                    SectionHeader("Historie")
+                    if (history.isNotEmpty()) {
+                        TextButton(onClick = { viewModel.clearHistory() }) {
+                            Text("Alle löschen")
+                        }
+                    }
+                }
+            }
 
             if (history.isEmpty()) {
                 item {

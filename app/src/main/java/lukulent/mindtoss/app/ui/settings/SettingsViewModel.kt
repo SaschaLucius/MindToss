@@ -79,6 +79,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         historyRepo.removeEntry(id)
     }
 
+    fun clearHistory() = viewModelScope.launch {
+        historyRepo.clearAll()
+    }
+
     fun editHistoryEntry(entry: HistoryEntry) {
         viewModelScope.launch {
             settingsRepo.setDraft(entry.content)

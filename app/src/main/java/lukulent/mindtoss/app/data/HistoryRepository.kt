@@ -63,4 +63,10 @@ class HistoryRepository(private val context: Context) {
             prefs[HISTORY_JSON] = json.encodeToString(current.map { if (it.id == id) transform(it) else it })
         }
     }
+
+    suspend fun clearAll() {
+        context.historyDataStore.edit { prefs ->
+            prefs[HISTORY_JSON] = "[]"
+        }
+    }
 }
