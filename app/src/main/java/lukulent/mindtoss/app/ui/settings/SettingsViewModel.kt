@@ -20,6 +20,7 @@ import lukulent.mindtoss.app.data.HistoryRepository
 import lukulent.mindtoss.app.data.SettingsRepository
 import lukulent.mindtoss.app.data.model.HistoryEntry
 import lukulent.mindtoss.app.data.model.MessageType
+import lukulent.mindtoss.app.data.model.SendStatus
 import lukulent.mindtoss.app.network.ResendApi
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
@@ -107,7 +108,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
             val lines = entry.content.lines()
             val subject = lines.first()
-            val body = if (lines.size > 1) lines.drop(1).joinToString("\n") else ""
+            val body = if (lines.size > 1) lines.drop(1).joinToString("\n").trim() else subject
 
             val result = ResendApi.sendEmail(
                 apiKey = apiKeyVal,
@@ -118,9 +119,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             )
 
             if (result.isSuccess) {
+                historyRepo.updateEntry(entry.id) { it.copy(status = SendStatus.SUCCESS, errorMessage = null) }
                 _message.emit("Erneut gesendet")
             } else {
-                _message.emit("Fehler: ${result.exceptionOrNull()?.message}")
+                val errorMsg = result.exceptionOrNull()?.message ?: "Unbekannter Fehler"
+                historyRepo.updateEntry(entry.id) { it.copy(status = SendStatus.FAILED, errorMessage = errorMsg) }
+                _message.emit("Fehler: $errorMsg")
             }
         }
     }

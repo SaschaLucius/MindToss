@@ -12,10 +12,8 @@ import androidx.work.workDataOf
 import kotlinx.coroutines.flow.first
 import lukulent.mindtoss.app.data.HistoryRepository
 import lukulent.mindtoss.app.data.SettingsRepository
-import lukulent.mindtoss.app.data.model.HistoryEntry
-import lukulent.mindtoss.app.data.model.MessageType
+import lukulent.mindtoss.app.data.model.SendStatus
 import lukulent.mindtoss.app.network.ResendApi
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 class SendMailWorker(
@@ -29,6 +27,7 @@ class SendMailWorker(
         val body = inputData.getString("body") ?: return Result.failure()
         val messageType = inputData.getString("message_type") ?: "NOTE"
         val content = inputData.getString("content") ?: ""
+        val historyId = inputData.getString("history_id") ?: ""
 
         val settingsRepo = SettingsRepository(applicationContext)
         val apiKey = settingsRepo.apiKey.first()
@@ -45,15 +44,10 @@ class SendMailWorker(
         )
 
         return if (result.isSuccess) {
-            val historyRepo = HistoryRepository(applicationContext)
-            historyRepo.addEntry(
-                HistoryEntry(
-                    id = UUID.randomUUID().toString(),
-                    content = content,
-                    timestamp = System.currentTimeMillis(),
-                    type = MessageType.valueOf(messageType),
-                )
-            )
+            if (historyId.isNotBlank()) {
+                val historyRepo = HistoryRepository(applicationContext)
+                historyRepo.updateEntry(historyId) { it.copy(status = SendStatus.SUCCESS) }
+            }
             Result.success()
         } else {
             Result.retry()
@@ -67,7 +61,8 @@ class SendMailWorker(
             subject: String,
             body: String,
             content: String,
-            messageType: MessageType,
+            messageType: lukulent.mindtoss.app.data.model.MessageType,
+            historyId: String,
         ) {
             val data = workDataOf(
                 "to" to to,
@@ -75,6 +70,7 @@ class SendMailWorker(
                 "body" to body,
                 "content" to content,
                 "message_type" to messageType.name,
+                "history_id" to historyId,
             )
 
             val request = OneTimeWorkRequestBuilder<SendMailWorker>()

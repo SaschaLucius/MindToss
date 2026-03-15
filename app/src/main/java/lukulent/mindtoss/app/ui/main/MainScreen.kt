@@ -40,12 +40,16 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -60,6 +64,18 @@ fun MainScreen(
     viewModel: MainViewModel = viewModel(),
 ) {
     val draftText by viewModel.draftText.collectAsStateWithLifecycle()
+    var textFieldValue by remember { mutableStateOf(TextFieldValue()) }
+
+    // Sync ViewModel → TextFieldValue (external changes: share, edit, clear)
+    LaunchedEffect(draftText) {
+        if (draftText != textFieldValue.text) {
+            textFieldValue = TextFieldValue(
+                text = draftText,
+                selection = TextRange(draftText.length),
+            )
+        }
+    }
+
     val taskRecipient by viewModel.taskRecipient.collectAsStateWithLifecycle()
     val isSending by viewModel.isSending.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
@@ -140,8 +156,11 @@ fun MainScreen(
                 .padding(16.dp),
         ) {
             OutlinedTextField(
-                value = draftText,
-                onValueChange = { viewModel.updateDraft(it) },
+                value = textFieldValue,
+                onValueChange = {
+                    textFieldValue = it
+                    viewModel.updateDraft(it.text)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)

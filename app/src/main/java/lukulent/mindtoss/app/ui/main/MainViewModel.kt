@@ -186,6 +186,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
             } else {
+                val historyId = UUID.randomUUID().toString()
+                historyRepo.addEntry(
+                    HistoryEntry(
+                        id = historyId,
+                        content = text,
+                        timestamp = System.currentTimeMillis(),
+                        type = type,
+                        status = SendStatus.QUEUED,
+                    )
+                )
                 SendMailWorker.enqueue(
                     context = getApplication(),
                     to = recipient,
@@ -193,15 +203,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     body = body,
                     content = text,
                     messageType = type,
-                )
-                historyRepo.addEntry(
-                    HistoryEntry(
-                        id = UUID.randomUUID().toString(),
-                        content = text,
-                        timestamp = System.currentTimeMillis(),
-                        type = type,
-                        status = SendStatus.QUEUED,
-                    )
+                    historyId = historyId,
                 )
                 settingsRepo.setDraft("")
                 _draftText.value = ""

@@ -52,4 +52,15 @@ class HistoryRepository(private val context: Context) {
             prefs[HISTORY_JSON] = json.encodeToString(current.filter { it.id != id })
         }
     }
+
+    suspend fun updateEntry(id: String, transform: (HistoryEntry) -> HistoryEntry) {
+        context.historyDataStore.edit { prefs ->
+            val current = try {
+                json.decodeFromString<List<HistoryEntry>>(prefs[HISTORY_JSON] ?: "[]")
+            } catch (_: Exception) {
+                emptyList()
+            }
+            prefs[HISTORY_JSON] = json.encodeToString(current.map { if (it.id == id) transform(it) else it })
+        }
+    }
 }
