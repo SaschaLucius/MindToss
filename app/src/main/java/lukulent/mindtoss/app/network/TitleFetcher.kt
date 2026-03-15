@@ -1,5 +1,6 @@
 package lukulent.mindtoss.app.network
 
+import android.text.Html
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.get
@@ -15,7 +16,9 @@ object TitleFetcher {
         return try {
             val response = client.get(url)
             val html = response.bodyAsText()
-            titleRegex.find(html)?.groupValues?.get(1)?.trim()
+            titleRegex.find(html)?.groupValues?.get(1)?.trim()?.let { raw ->
+                Html.fromHtml(raw, Html.FROM_HTML_MODE_LEGACY).toString()
+            }
         } catch (_: Exception) {
             null
         }
