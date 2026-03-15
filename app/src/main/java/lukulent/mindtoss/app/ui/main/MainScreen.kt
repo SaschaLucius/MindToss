@@ -41,6 +41,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
@@ -63,6 +65,7 @@ fun MainScreen(
     val hasPendingWork by viewModel.hasPendingWork.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val clipboardManager = LocalClipboardManager.current
+    val focusRequester = remember { FocusRequester() }
 
     val voiceLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -86,6 +89,10 @@ fun MainScreen(
             snackbarHostState.showSnackbar("In der Warteschlange – wird automatisch gesendet")
             onCloseApp()
         }
+    }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
     }
 
     LaunchedEffect(error) {
@@ -135,7 +142,8 @@ fun MainScreen(
                 onValueChange = { viewModel.updateDraft(it) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .weight(1f)
+                    .focusRequester(focusRequester),
                 placeholder = { Text("Was denkst du?") },
                 trailingIcon = {
                     IconButton(
