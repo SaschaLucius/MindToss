@@ -63,12 +63,13 @@ class MainActivity : ComponentActivity() {
     private fun handleShareIntent(intent: Intent?) {
         if (intent?.action != Intent.ACTION_SEND || intent.type != "text/plain") return
         val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return
+        val sharedSubject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
 
         val settingsRepo = SettingsRepository(applicationContext)
         lifecycleScope.launch {
             val shouldFetchTitle = settingsRepo.fetchTitle.first()
             val processedText = if (shouldFetchTitle) {
-                processSharedText(sharedText)
+                processSharedText(sharedText, sharedSubject)
             } else {
                 sharedText
             }
@@ -76,14 +77,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private suspend fun processSharedText(text: String): String {
+    private suspend fun processSharedText(text: String, subject: String?): String {
         val urlRegex = Regex("https?://\\S+")
         val lines = text.lines()
 
         // Single line that is just a URL
         if (lines.size == 1 && urlRegex.matches(text.trim())) {
             val url = text.trim()
-            val title = TitleFetcher.fetchTitle(url)
+            // Prefer EXTRA_SUBJECT if available, otherwise fetch title
+            val title = subject?.takeIf { it.isNotBlank() } ?: TitleFetcher.fetchTitle(url)
             return if (title != null) "$title\n$url" else url
         }
 
