@@ -78,6 +78,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         historyRepo.removeEntry(id)
     }
 
+    fun editHistoryEntry(entry: HistoryEntry) {
+        viewModelScope.launch {
+            settingsRepo.setDraft(entry.content)
+        }
+    }
+
     fun copyHistoryEntry(entry: HistoryEntry) {
         val clipboard = getApplication<Application>()
             .getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager

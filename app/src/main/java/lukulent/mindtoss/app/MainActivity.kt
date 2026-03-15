@@ -48,6 +48,7 @@ class MainActivity : ComponentActivity() {
                     composable("settings") {
                         SettingsScreen(
                             onBack = { navController.popBackStack() },
+                            onEditEntry = { navController.popBackStack() },
                         )
                     }
                 }

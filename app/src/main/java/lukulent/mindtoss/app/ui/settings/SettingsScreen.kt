@@ -16,10 +16,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -48,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import lukulent.mindtoss.app.data.model.HistoryEntry
 import lukulent.mindtoss.app.data.model.MessageType
+import lukulent.mindtoss.app.data.model.SendStatus
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -56,6 +59,7 @@ import java.util.Locale
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onEditEntry: (() -> Unit)? = null,
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val apiKey by viewModel.apiKey.collectAsStateWithLifecycle()
@@ -214,6 +218,10 @@ fun SettingsScreen(
                     onResend = { viewModel.resendHistoryEntry(entry) },
                     onDelete = { viewModel.deleteHistoryEntry(entry.id) },
                     onCopy = { viewModel.copyHistoryEntry(entry) },
+                    onEdit = {
+                        viewModel.editHistoryEntry(entry)
+                        onEditEntry?.invoke()
+                    },
                 )
             }
 
@@ -238,17 +246,40 @@ private fun HistoryItem(
     onResend: () -> Unit,
     onDelete: () -> Unit,
     onCopy: () -> Unit,
+    onEdit: () -> Unit,
 ) {
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.GERMANY) }
     val typeIcon = if (entry.type == MessageType.NOTE) "\uD83D\uDCE7" else "\u2705"
+    val statusIcon = when (entry.status) {
+        SendStatus.SUCCESS -> "\u2714\uFE0F"
+        SendStatus.FAILED -> "\u274C"
+        SendStatus.QUEUED -> "\u23F3"
+    }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = when (entry.status) {
+            SendStatus.FAILED -> CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+            )
+            else -> CardDefaults.cardColors()
+        },
+    ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
-                "$typeIcon  ${dateFormat.format(Date(entry.timestamp))}",
+                "$typeIcon $statusIcon  ${dateFormat.format(Date(entry.timestamp))}",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (entry.errorMessage != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    entry.errorMessage,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                    maxLines = 2,
+                )
+            }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 entry.content.take(200),
@@ -256,21 +287,21 @@ private fun HistoryItem(
                 maxLines = 3,
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TextButton(onClick = onResend, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Senden")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Default.Edit, contentDescription = "Bearbeiten", modifier = Modifier.size(18.dp))
                 }
-                TextButton(onClick = onCopy, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Kopieren")
+                IconButton(onClick = onResend) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Senden", modifier = Modifier.size(18.dp))
                 }
-                TextButton(onClick = onDelete, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Löschen")
+                IconButton(onClick = onCopy) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = "Kopieren", modifier = Modifier.size(18.dp))
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.Delete, contentDescription = "Löschen", modifier = Modifier.size(18.dp))
                 }
             }
         }

@@ -19,6 +19,7 @@ import lukulent.mindtoss.app.data.HistoryRepository
 import lukulent.mindtoss.app.data.SettingsRepository
 import lukulent.mindtoss.app.data.model.HistoryEntry
 import lukulent.mindtoss.app.data.model.MessageType
+import lukulent.mindtoss.app.data.model.SendStatus
 import lukulent.mindtoss.app.network.ResendApi
 import lukulent.mindtoss.app.worker.SendMailWorker
 import java.util.UUID
@@ -103,7 +104,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val taskRecip = settingsRepo.taskRecipient.first()
 
             if (apiKey.isBlank() || noteRecipient.isBlank()) {
-                _error.value = "Bitte konfiguriere zuerst die Resend-Einstellungen"
+                val errorMsg = "Bitte konfiguriere zuerst die Resend-Einstellungen"
+                _error.value = errorMsg
+                historyRepo.addEntry(
+                    HistoryEntry(
+                        id = UUID.randomUUID().toString(),
+                        content = text,
+                        timestamp = System.currentTimeMillis(),
+                        type = type,
+                        status = SendStatus.FAILED,
+                        errorMessage = errorMsg,
+                    )
+                )
                 return@launch
             }
 
@@ -113,7 +125,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             if (recipient.isBlank()) {
-                _error.value = "Kein Empfänger konfiguriert"
+                val errorMsg = "Kein Empfänger konfiguriert"
+                _error.value = errorMsg
+                historyRepo.addEntry(
+                    HistoryEntry(
+                        id = UUID.randomUUID().toString(),
+                        content = text,
+                        timestamp = System.currentTimeMillis(),
+                        type = type,
+                        status = SendStatus.FAILED,
+                        errorMessage = errorMsg,
+                    )
+                )
                 return@launch
             }
 
@@ -142,13 +165,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             content = text,
                             timestamp = System.currentTimeMillis(),
                             type = type,
+                            status = SendStatus.SUCCESS,
                         )
                     )
                     settingsRepo.setDraft("")
                     _draftText.value = ""
                     _sendSuccess.emit(Unit)
                 } else {
-                    _error.value = result.exceptionOrNull()?.message ?: "Unbekannter Fehler"
+                    val errorMsg = result.exceptionOrNull()?.message ?: "Unbekannter Fehler"
+                    _error.value = errorMsg
+                    historyRepo.addEntry(
+                        HistoryEntry(
+                            id = UUID.randomUUID().toString(),
+                            content = text,
+                            timestamp = System.currentTimeMillis(),
+                            type = type,
+                            status = SendStatus.FAILED,
+                            errorMessage = errorMsg,
+                        )
+                    )
                 }
             } else {
                 SendMailWorker.enqueue(
@@ -158,6 +193,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     body = body,
                     content = text,
                     messageType = type,
+                )
+                historyRepo.addEntry(
+                    HistoryEntry(
+                        id = UUID.randomUUID().toString(),
+                        content = text,
+                        timestamp = System.currentTimeMillis(),
+                        type = type,
+                        status = SendStatus.QUEUED,
+                    )
                 )
                 settingsRepo.setDraft("")
                 _draftText.value = ""
