@@ -33,7 +33,7 @@ class SettingsRepository(private val context: Context) {
     }
     val noteRecipient: Flow<String> = context.dataStore.data.map { it[NOTE_RECIPIENT] ?: "" }
     val taskRecipient: Flow<String> = context.dataStore.data.map { it[TASK_RECIPIENT] ?: "" }
-    val fetchTitle: Flow<Boolean> = context.dataStore.data.map { it[FETCH_TITLE] ?: false }
+    val fetchTitle: Flow<Boolean> = context.dataStore.data.map { it[FETCH_TITLE] ?: true }
     val theme: Flow<String> = context.dataStore.data.map { it[THEME] ?: "system" }
     val draft: Flow<String> = context.dataStore.data.map { it[DRAFT] ?: "" }
 
