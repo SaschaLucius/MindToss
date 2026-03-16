@@ -202,6 +202,12 @@ fun MainScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxHeight(),
                 ) {
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Einstellungen")
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
                     Button(
                         onClick = { viewModel.send(MessageType.NOTE) },
                         enabled = !isSending && draftText.isNotBlank(),
@@ -238,11 +244,6 @@ fun MainScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Task")
                         }
-                    }
-
-                    Spacer(modifier = Modifier.weight(1f))
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Einstellungen")
                     }
                 }
             }
