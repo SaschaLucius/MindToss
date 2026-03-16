@@ -74,7 +74,13 @@ class MainActivity : ComponentActivity() {
             } else {
                 sharedText
             }
-            settingsRepo.setDraft(processedText)
+            val currentDraft = settingsRepo.draft.first()
+            val newDraft = if (currentDraft.isBlank()) {
+                processedText
+            } else {
+                "$currentDraft\n\n$processedText"
+            }
+            settingsRepo.setDraft(newDraft)
         }
     }
 
