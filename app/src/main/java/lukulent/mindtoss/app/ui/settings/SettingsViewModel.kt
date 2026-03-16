@@ -112,7 +112,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
             val lines = entry.content.lines()
             val subject = lines.first()
-            val body = if (lines.size > 1) lines.drop(1).joinToString("\n").trim() else subject
+            val body = entry.content
 
             val result = ResendApi.sendEmail(
                 apiKey = apiKeyVal,
