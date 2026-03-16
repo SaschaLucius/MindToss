@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
@@ -82,6 +83,7 @@ fun MainScreen(
     val hasPendingWork by viewModel.hasPendingWork.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val clipboardManager = LocalClipboardManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
 
     val voiceLauncher = rememberLauncherForActivityResult(
@@ -114,6 +116,7 @@ fun MainScreen(
 
     LaunchedEffect(error) {
         error?.let {
+            keyboardController?.hide()
             val result = snackbarHostState.showSnackbar(
                 message = it,
                 actionLabel = "Kopieren",
