@@ -139,22 +139,24 @@ fun MainScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = {
-                    Row {
-                        Text("MindToss")
-                        if (hasPendingWork) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            BadgedBox(badge = { Badge() }) {}
+            if (!isLandscape) {
+                TopAppBar(
+                    title = {
+                        Row {
+                            Text("MindToss")
+                            if (hasPendingWork) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                BadgedBox(badge = { Badge() }) {}
+                            }
                         }
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Einstellungen")
-                    }
-                },
-            )
+                    },
+                    actions = {
+                        IconButton(onClick = onNavigateToSettings) {
+                            Icon(Icons.Default.Settings, contentDescription = "Einstellungen")
+                        }
+                    },
+                )
+            }
         },
     ) { padding ->
         if (isLandscape) {
@@ -163,7 +165,7 @@ fun MainScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .imePadding()
-                    .padding(16.dp),
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 OutlinedTextField(
@@ -237,6 +239,11 @@ fun MainScreen(
                             Text("Task")
                         }
                     }
+
+                    Spacer(modifier = Modifier.weight(1f))
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Einstellungen")
+                    }
                 }
             }
         } else {
@@ -245,7 +252,7 @@ fun MainScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .imePadding()
-                    .padding(16.dp),
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
             ) {
             OutlinedTextField(
                 value = textFieldValue,
@@ -277,7 +284,7 @@ fun MainScreen(
                 },
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
