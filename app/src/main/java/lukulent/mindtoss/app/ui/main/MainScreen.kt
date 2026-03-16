@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -175,6 +176,7 @@ fun MainScreen(
                         .weight(1f)
                         .fillMaxHeight()
                         .focusRequester(focusRequester),
+                    shape = RoundedCornerShape(16.dp),
                     placeholder = { Text("Was denkst du?") },
                     trailingIcon = {
                         IconButton(
@@ -255,6 +257,7 @@ fun MainScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .focusRequester(focusRequester),
+                shape = RoundedCornerShape(16.dp),
                 placeholder = { Text("Was denkst du?") },
                 trailingIcon = {
                     IconButton(
