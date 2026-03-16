@@ -102,6 +102,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val senderEmail = settingsRepo.effectiveSenderEmail.first()
             val noteRecipient = settingsRepo.noteRecipient.first()
             val taskRecip = settingsRepo.taskRecipient.first()
+            val smartSplit = settingsRepo.smartTaskSplit.first()
 
             if (apiKey.isBlank() || noteRecipient.isBlank()) {
                 val errorMsg = "Bitte konfiguriere zuerst die Resend-Einstellungen"
@@ -140,74 +141,90 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            val lines = text.lines()
-            val subject = lines.first()
-            val body = text
+            // Split into chunks if smart task split is enabled and sending as task
+            val chunks = if (smartSplit && type == MessageType.TASK) {
+                text.split(Regex("\n\\s*\n")).map { it.trim() }.filter { it.isNotBlank() }
+            } else {
+                listOf(text)
+            }
 
-            if (isOnline()) {
-                _isSending.value = true
-                _error.value = null
+            _isSending.value = true
+            _error.value = null
+            val errors = mutableListOf<String>()
+            var allQueued = false
 
-                val result = ResendApi.sendEmail(
-                    apiKey = apiKey,
-                    from = senderEmail,
-                    to = recipient,
-                    subject = subject,
-                    body = body,
-                )
+            for (chunk in chunks) {
+                val lines = chunk.lines()
+                val subject = lines.first()
+                val body = chunk
 
-                _isSending.value = false
-
-                if (result.isSuccess) {
+                if (isOnline()) {
+                    val result = ResendApi.sendEmail(
+                        apiKey = apiKey,
+                        from = senderEmail,
+                        to = recipient,
+                        subject = subject,
+                        body = body,
+                    )
+                    if (!result.isSuccess) {
+                        errors.add(result.exceptionOrNull()?.message ?: "Unbekannter Fehler")
+                    }
+                } else {
+                    allQueued = true
+                    val historyId = UUID.randomUUID().toString()
                     historyRepo.addEntry(
                         HistoryEntry(
-                            id = UUID.randomUUID().toString(),
-                            content = text,
+                            id = historyId,
+                            content = chunk,
                             timestamp = System.currentTimeMillis(),
                             type = type,
-                            status = SendStatus.SUCCESS,
+                            status = SendStatus.QUEUED,
                         )
                     )
-                    settingsRepo.setDraft("")
-                    _draftText.value = ""
-                    _sendSuccess.emit(Unit)
-                } else {
-                    val errorMsg = result.exceptionOrNull()?.message ?: "Unbekannter Fehler"
-                    _error.value = errorMsg
-                    historyRepo.addEntry(
-                        HistoryEntry(
-                            id = UUID.randomUUID().toString(),
-                            content = text,
-                            timestamp = System.currentTimeMillis(),
-                            type = type,
-                            status = SendStatus.FAILED,
-                            errorMessage = errorMsg,
-                        )
+                    SendMailWorker.enqueue(
+                        context = getApplication(),
+                        to = recipient,
+                        subject = subject,
+                        body = body,
+                        content = chunk,
+                        messageType = type,
+                        historyId = historyId,
                     )
                 }
-            } else {
-                val historyId = UUID.randomUUID().toString()
-                historyRepo.addEntry(
-                    HistoryEntry(
-                        id = historyId,
-                        content = text,
-                        timestamp = System.currentTimeMillis(),
-                        type = type,
-                        status = SendStatus.QUEUED,
-                    )
-                )
-                SendMailWorker.enqueue(
-                    context = getApplication(),
-                    to = recipient,
-                    subject = subject,
-                    body = body,
-                    content = text,
-                    messageType = type,
-                    historyId = historyId,
-                )
+            }
+
+            _isSending.value = false
+
+            if (allQueued) {
                 settingsRepo.setDraft("")
                 _draftText.value = ""
                 _queued.emit(Unit)
+            } else if (errors.isEmpty()) {
+                historyRepo.addEntry(
+                    HistoryEntry(
+                        id = UUID.randomUUID().toString(),
+                        content = text,
+                        timestamp = System.currentTimeMillis(),
+                        type = type,
+                        status = SendStatus.SUCCESS,
+                    )
+                )
+                settingsRepo.setDraft("")
+                _draftText.value = ""
+                _sendSuccess.emit(Unit)
+            } else {
+                val errorMsg = errors.joinToString("\n")
+                _error.value = errorMsg
+                historyRepo.addEntry(
+                    HistoryEntry(
+                        id = UUID.randomUUID().toString(),
+                        content = text,
+                        timestamp = System.currentTimeMillis(),
+                        type = type,
+                        status = SendStatus.FAILED,
+                        errorMessage = errorMsg,
+                    )
+                )
             }
         }
     }

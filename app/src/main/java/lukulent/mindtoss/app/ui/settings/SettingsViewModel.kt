@@ -39,6 +39,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     val fetchTitle = settingsRepo.fetchTitle
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val smartTaskSplit = settingsRepo.smartTaskSplit
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val theme = settingsRepo.theme
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "system")
     val history = historyRepo.history
@@ -73,6 +75,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { settingsRepo.setTaskRecipient(value) }
     }
     fun updateFetchTitle(value: Boolean) = viewModelScope.launch { settingsRepo.setFetchTitle(value) }
+    fun updateSmartTaskSplit(value: Boolean) = viewModelScope.launch { settingsRepo.setSmartTaskSplit(value) }
     fun updateTheme(value: String) = viewModelScope.launch { settingsRepo.setTheme(value) }
 
     fun deleteHistoryEntry(id: String) = viewModelScope.launch {

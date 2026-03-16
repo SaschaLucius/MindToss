@@ -71,6 +71,7 @@ fun SettingsScreen(
     val noteRecipient by viewModel.noteRecipient.collectAsStateWithLifecycle()
     val taskRecipient by viewModel.taskRecipient.collectAsStateWithLifecycle()
     val fetchTitle by viewModel.fetchTitle.collectAsStateWithLifecycle()
+    val smartTaskSplit by viewModel.smartTaskSplit.collectAsStateWithLifecycle()
     val theme by viewModel.theme.collectAsStateWithLifecycle()
     val history by viewModel.history.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -174,6 +175,22 @@ fun SettingsScreen(
                     Switch(
                         checked = fetchTitle,
                         onCheckedChange = { viewModel.updateFetchTitle(it) },
+                    )
+                }
+            }
+
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Smart Task Split (Leerzeilen = separate Tasks)",
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = smartTaskSplit,
+                        onCheckedChange = { viewModel.updateSmartTaskSplit(it) },
                     )
                 }
             }
