@@ -1,5 +1,6 @@
 package lukulent.mindtoss.app.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,7 +40,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -268,9 +272,12 @@ private fun HistoryItem(
         SendStatus.FAILED -> "\u274C"
         SendStatus.QUEUED -> "\u23F3"
     }
+    var expanded by remember { mutableStateOf(false) }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = !expanded },
         colors = when (entry.status) {
             SendStatus.FAILED -> CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.errorContainer,
@@ -295,9 +302,9 @@ private fun HistoryItem(
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                entry.content.take(200),
+                if (expanded) entry.content else entry.content.lines().first().take(100),
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = 3,
+                maxLines = if (expanded) Int.MAX_VALUE else 1,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(
