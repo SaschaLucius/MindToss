@@ -123,11 +123,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             )
 
             if (result.isSuccess) {
-                historyRepo.updateEntry(entry.id) { it.copy(status = SendStatus.SUCCESS, errorMessage = null) }
+                historyRepo.updateEntry(entry.id) { it.copy(status = SendStatus.SUCCESS, errorMessage = null, timestamp = System.currentTimeMillis()) }
                 _message.emit("Erneut gesendet")
             } else {
                 val errorMsg = result.exceptionOrNull()?.message ?: "Unbekannter Fehler"
-                historyRepo.updateEntry(entry.id) { it.copy(status = SendStatus.FAILED, errorMessage = errorMsg) }
+                historyRepo.updateEntry(entry.id) { it.copy(status = SendStatus.FAILED, errorMessage = errorMsg, timestamp = System.currentTimeMillis()) }
                 _message.emit("Fehler: $errorMsg")
             }
         }
