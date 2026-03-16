@@ -297,7 +297,7 @@ private fun HistoryItem(
                     entry.errorMessage,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error,
-                    maxLines = 2,
+                    maxLines = if (expanded) Int.MAX_VALUE else 1,
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
