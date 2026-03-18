@@ -50,6 +50,35 @@ fi
 # --- Subject = erste Zeile, Body = gesamter Text ---
 SUBJECT=$(echo "$INPUT" | head -1)
 
+# --- Quell-Metadaten sammeln ---
+SOURCE_APP=$(osascript -e 'tell application "System Events" to tell (first process whose frontmost is true) to return name' 2>/dev/null || echo "")
+SOURCE_WINDOW=$(osascript -e 'tell application "System Events" to tell (first process whose frontmost is true) to return name of window 1' 2>/dev/null || echo "")
+SOURCE_URL=""
+
+# URL aus Browser holen (Safari, Chrome, Arc, Brave, Edge)
+case "$SOURCE_APP" in
+    Safari)
+        SOURCE_URL=$(osascript -e 'tell application "Safari" to get URL of front document' 2>/dev/null || echo "")
+        ;;
+    "Google Chrome"|Arc|"Brave Browser"|"Microsoft Edge")
+        SOURCE_URL=$(osascript -e "tell application \"$SOURCE_APP\" to get URL of active tab of front window" 2>/dev/null || echo "")
+        ;;
+esac
+
+# Metadaten an Text anhängen
+SOURCE_BLOCK=""
+if [ -n "$SOURCE_APP" ]; then
+    SOURCE_BLOCK=$'\n\n---\n'"Quelle: $SOURCE_APP"
+    if [ -n "$SOURCE_WINDOW" ]; then
+        SOURCE_BLOCK="$SOURCE_BLOCK"$'\n'"Fenster: $SOURCE_WINDOW"
+    fi
+    if [ -n "$SOURCE_URL" ]; then
+        SOURCE_BLOCK="$SOURCE_BLOCK"$'\n'"URL: $SOURCE_URL"
+    fi
+fi
+
+FULL_TEXT="${INPUT}${SOURCE_BLOCK}"
+
 # --- JSON sicher erzeugen ---
 JSON_BODY=$(python3 -c "
 import json, sys
@@ -61,7 +90,7 @@ print(json.dumps({
     'subject': subject,
     'text': text
 }))
-" "$FROM" "$TO" <<< "$INPUT")
+" "$FROM" "$TO" <<< "$FULL_TEXT")
 
 # --- Senden ---
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST 'https://api.resend.com/emails' \
