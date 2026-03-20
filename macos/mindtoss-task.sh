@@ -50,17 +50,19 @@ fi
 # --- Subject = erste Zeile, Body = gesamter Text ---
 SUBJECT=$(echo "$INPUT" | head -1)
 
-# --- Quell-Metadaten sammeln ---
-SOURCE_APP=$(osascript -e 'tell application "System Events" to tell (first process whose frontmost is true) to return name' 2>/dev/null || echo "")
-SOURCE_WINDOW=$(osascript -e 'tell application "System Events" to tell (first process whose frontmost is true) to return name of window 1' 2>/dev/null || echo "")
+# --- Quell-Metadaten sammeln (ohne Accessibility-Berechtigung) ---
+SOURCE_APP=$(lsappinfo info -only name $(lsappinfo front) 2>/dev/null | sed 's/.*"\(.*\)".*/\1/' || echo "")
+SOURCE_WINDOW=""
 SOURCE_URL=""
 
-# URL aus Browser holen (Safari, Chrome, Arc, Brave, Edge)
+# Fenster-Titel und URL aus bekannten Apps holen (über deren native Scripting-API)
 case "$SOURCE_APP" in
     Safari)
+        SOURCE_WINDOW=$(osascript -e 'tell application "Safari" to get name of front document' 2>/dev/null || echo "")
         SOURCE_URL=$(osascript -e 'tell application "Safari" to get URL of front document' 2>/dev/null || echo "")
         ;;
     "Google Chrome"|Arc|"Brave Browser"|"Microsoft Edge")
+        SOURCE_WINDOW=$(osascript -e "tell application \"$SOURCE_APP\" to get title of active tab of front window" 2>/dev/null || echo "")
         SOURCE_URL=$(osascript -e "tell application \"$SOURCE_APP\" to get URL of active tab of front window" 2>/dev/null || echo "")
         ;;
 esac
