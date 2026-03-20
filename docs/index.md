@@ -7,6 +7,10 @@ title: MindToss
 
 > Gedanken raus, Mail raus, fertig.
 
+<p align="center">
+  <img src="preview.png" alt="MindToss Preview" width="300">
+</p>
+
 MindToss is a minimalist Android app for capturing thoughts instantly. Type or dictate a note, hit send — the thought lands in your inbox, the app closes. No friction, no overhead.
 
 Born from the frustration of losing fleeting ideas before they can be written down, MindToss reduces the capture process to its absolute minimum: **open → type → send → done**.

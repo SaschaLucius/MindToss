@@ -2,6 +2,10 @@
 
 > Schnell Gedanken aus dem Kopf, per Mail weiterleiten, App schließt sich. Fertig.
 
+<p align="center">
+  <img src="preview.png" alt="MindToss Preview" width="300">
+</p>
+
 MindToss ist eine minimalistische Android-App, die Gedanken, Notizen und Links blitzschnell per E-Mail weiterleitet – über die [Resend](https://resend.com) API.
 
 ## Features
