@@ -126,12 +126,26 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             )
 
             if (result.isSuccess) {
-                historyRepo.updateEntry(entry.id) { it.copy(status = SendStatus.SUCCESS, errorMessage = null, timestamp = System.currentTimeMillis()) }
+                val resendId = result.getOrNull()
+                historyRepo.updateEntry(entry.id) { it.copy(status = SendStatus.SUCCESS, errorMessage = null, timestamp = System.currentTimeMillis(), resendId = resendId, lastEvent = null) }
                 _message.emit("Erneut gesendet")
             } else {
                 val errorMsg = result.exceptionOrNull()?.message ?: "Unbekannter Fehler"
                 historyRepo.updateEntry(entry.id) { it.copy(status = SendStatus.FAILED, errorMessage = errorMsg, timestamp = System.currentTimeMillis()) }
                 _message.emit("Fehler: $errorMsg")
+            }
+        }
+    }
+
+    fun refreshEmailStatus(entry: HistoryEntry) {
+        val resendId = entry.resendId ?: return
+        viewModelScope.launch {
+            val apiKeyVal = apiKey.first()
+            if (apiKeyVal.isBlank()) return@launch
+            val result = ResendApi.retrieveEmail(apiKey = apiKeyVal, emailId = resendId)
+            if (result.isSuccess) {
+                val status = result.getOrThrow()
+                historyRepo.updateEntry(entry.id) { it.copy(lastEvent = status.lastEvent) }
             }
         }
     }

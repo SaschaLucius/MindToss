@@ -15,4 +15,6 @@ data class HistoryEntry(
     val type: MessageType,
     val status: SendStatus = SendStatus.SUCCESS,
     val errorMessage: String? = null,
+    val resendId: String? = null,
+    val lastEvent: String? = null,
 )

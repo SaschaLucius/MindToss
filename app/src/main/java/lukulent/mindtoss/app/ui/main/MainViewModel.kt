@@ -152,6 +152,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _error.value = null
             val errors = mutableListOf<String>()
             var allQueued = false
+            val resendIds = mutableListOf<String>()
 
             for (chunk in chunks) {
                 val lines = chunk.lines()
@@ -166,7 +167,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         subject = subject,
                         body = body,
                     )
-                    if (!result.isSuccess) {
+                    if (result.isSuccess) {
+                        resendIds.add(result.getOrThrow())
+                    } else {
                         errors.add(result.exceptionOrNull()?.message ?: "Unbekannter Fehler")
                     }
                 } else {
@@ -207,6 +210,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         timestamp = System.currentTimeMillis(),
                         type = type,
                         status = SendStatus.SUCCESS,
+                        resendId = resendIds.firstOrNull(),
                     )
                 )
                 settingsRepo.setDraft("")

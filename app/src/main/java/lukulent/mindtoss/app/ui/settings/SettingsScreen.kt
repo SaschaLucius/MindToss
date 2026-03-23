@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Drafts
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Visibility
@@ -256,6 +257,7 @@ fun SettingsScreen(
                         viewModel.editHistoryEntry(entry)
                         onEditEntry?.invoke()
                     },
+                    onRefreshStatus = { viewModel.refreshEmailStatus(entry) },
                 )
             }
 
@@ -281,6 +283,7 @@ private fun HistoryItem(
     onDelete: () -> Unit,
     onCopy: () -> Unit,
     onEdit: () -> Unit,
+    onRefreshStatus: () -> Unit,
 ) {
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.GERMANY) }
     val typeIcon = if (entry.type == MessageType.NOTE) "\uD83D\uDCE7" else "\u2705"
@@ -303,11 +306,41 @@ private fun HistoryItem(
         },
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                "$typeIcon $statusIcon  ${dateFormat.format(Date(entry.timestamp))}",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "$typeIcon $statusIcon  ${dateFormat.format(Date(entry.timestamp))}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                if (entry.lastEvent != null) {
+                    val eventLabel = when (entry.lastEvent) {
+                        "opened" -> "\uD83D\uDC40 Gelesen"
+                        "clicked" -> "\uD83D\uDD17 Geklickt"
+                        "delivered" -> "\uD83D\uDCEC Zugestellt"
+                        "bounced" -> "\u26A0\uFE0F Bounce"
+                        else -> entry.lastEvent
+                    }
+                    Text(
+                        eventLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (entry.lastEvent == "opened" || entry.lastEvent == "clicked")
+                            MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else if (entry.resendId != null && entry.status == SendStatus.SUCCESS) {
+                    Icon(
+                        Icons.Default.Drafts,
+                        contentDescription = "Status abrufen",
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clickable { onRefreshStatus() },
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             if (entry.errorMessage != null) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(

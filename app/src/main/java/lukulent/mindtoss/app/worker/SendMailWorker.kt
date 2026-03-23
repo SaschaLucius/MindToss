@@ -46,7 +46,10 @@ class SendMailWorker(
         return if (result.isSuccess) {
             if (historyId.isNotBlank()) {
                 val historyRepo = HistoryRepository(applicationContext)
-                historyRepo.updateEntry(historyId) { it.copy(status = SendStatus.SUCCESS) }
+                val resendId = result.getOrNull()
+                historyRepo.updateEntry(historyId) {
+                    it.copy(status = SendStatus.SUCCESS, resendId = resendId)
+                }
             }
             Result.success()
         } else {
