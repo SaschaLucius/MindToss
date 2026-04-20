@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Drafts
@@ -65,6 +66,7 @@ import java.util.Locale
 fun SettingsScreen(
     onBack: () -> Unit,
     onEditEntry: (() -> Unit)? = null,
+    onNavigateToLicenses: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val apiKey by viewModel.apiKey.collectAsStateWithLifecycle()
@@ -259,6 +261,32 @@ fun SettingsScreen(
                     },
                     onRefreshStatus = { viewModel.refreshEmailStatus(entry) },
                 )
+            }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            // --- About ---
+            item { SectionHeader("Über") }
+
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateToLicenses() }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Open-Source-Lizenzen",
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForwardIos,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }

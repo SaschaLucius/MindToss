@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import lukulent.mindtoss.app.data.SettingsRepository
 import lukulent.mindtoss.app.network.TitleFetcher
+import lukulent.mindtoss.app.ui.licenses.LicensesScreen
 import lukulent.mindtoss.app.ui.main.MainScreen
 import lukulent.mindtoss.app.ui.main.MainViewModel
 import lukulent.mindtoss.app.ui.settings.SettingsScreen
@@ -49,7 +50,11 @@ class MainActivity : ComponentActivity() {
                         SettingsScreen(
                             onBack = { navController.popBackStack() },
                             onEditEntry = { navController.popBackStack() },
+                            onNavigateToLicenses = { navController.navigate("licenses") },
                         )
+                    }
+                    composable("licenses") {
+                        LicensesScreen(onBack = { navController.popBackStack() })
                     }
                 }
             }
