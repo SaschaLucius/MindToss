@@ -68,7 +68,7 @@ class MainActivity : ComponentActivity() {
                         val viewModel: MainViewModel = viewModel()
                         MainScreen(
                             onNavigateToSettings = { navController.navigate("settings") },
-                            onCloseApp = { finishAffinity() },
+                            onCloseApp = { finishAndRemoveTask() },
                             viewModel = viewModel,
                             previewSuccessOverlay = previewSuccess,
                         )

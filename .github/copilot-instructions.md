@@ -43,7 +43,7 @@ lukulent.mindtoss.app/
 
 ## Key Behaviors
 
-1. **Send flow:** Type text → Send → App closes automatically (`finishAffinity()`)
+1. **Send flow:** Type text → Send → App closes and leaves Recents (`finishAndRemoveTask()`)
 2. **Error handling:** Show Snackbar, app stays open
 3. **Offline:** Queue with WorkManager (NetworkType.CONNECTED constraint) → auto-send when online
 4. **Share target:** Receives `text/plain` via ACTION_SEND, optionally fetches page titles for URLs
