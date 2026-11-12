@@ -15,6 +15,7 @@ import lukulent.mindtoss.app.data.SettingsRepository
 import lukulent.mindtoss.app.data.model.SendStatus
 import lukulent.mindtoss.app.network.MailFormat
 import lukulent.mindtoss.app.network.ResendApi
+import lukulent.mindtoss.app.network.ResendErrorMapper
 import java.util.concurrent.TimeUnit
 
 class SendMailWorker(
@@ -36,7 +37,10 @@ class SendMailWorker(
         val apiKey = settingsRepo.apiKey.first()
         val from = settingsRepo.effectiveSenderEmail.first()
 
-        if (apiKey.isBlank()) return Result.failure()
+        if (apiKey.isBlank()) {
+            markFailed(historyRepo, historyId, "API-Key fehlt. Bitte in den Einstellungen prüfen.")
+            return Result.failure()
+        }
 
         val parts = MailFormat.subjectAndBody(entry.content)
         val result = ResendApi.sendEmail(
@@ -47,18 +51,37 @@ class SendMailWorker(
             body = parts.body,
         )
 
-        return if (result.isSuccess) {
+        if (result.isSuccess) {
             val resendId = result.getOrNull()
             historyRepo.updateEntry(historyId) {
-                it.copy(status = SendStatus.SUCCESS, resendId = resendId)
+                it.copy(status = SendStatus.SUCCESS, resendId = resendId, errorMessage = null)
             }
-            Result.success()
-        } else {
-            Result.retry()
+            return Result.success()
+        }
+
+        val raw = result.exceptionOrNull()?.message
+        val mapped = ResendErrorMapper.map(raw)
+        val attemptsExhausted = runAttemptCount >= MAX_ATTEMPTS
+        if (ResendErrorMapper.isPermanentFailure(raw) || attemptsExhausted) {
+            markFailed(historyRepo, historyId, mapped.message)
+            return Result.failure()
+        }
+        return Result.retry()
+    }
+
+    private suspend fun markFailed(
+        historyRepo: HistoryRepository,
+        historyId: String,
+        message: String,
+    ) {
+        historyRepo.updateEntry(historyId) {
+            it.copy(status = SendStatus.FAILED, errorMessage = message)
         }
     }
 
     companion object {
+        private const val MAX_ATTEMPTS = 5
+
         fun enqueue(
             context: Context,
             to: String,
