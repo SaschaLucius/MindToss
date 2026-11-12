@@ -12,23 +12,24 @@ object ResendErrorMapper {
     /** Client errors that will not succeed on retry. 429 is excluded so the queue backs off. */
     fun isPermanentFailure(raw: String?): Boolean {
         val details = raw ?: return false
-        val code = httpStatus.find(details)?.groupValues?.get(1)?.toIntOrNull() ?: return false
+        val code = httpCode(details) ?: return false
         return code in 400..499 && code != 429
     }
 
     fun map(raw: String?): UserFacingError {
         val details = raw?.takeIf { it.isNotBlank() } ?: "Unbekannter Fehler"
-        val message = when {
-            details.contains("401") || details.contains("Unauthorized", ignoreCase = true) ->
+        val code = httpCode(details)
+        val base = when {
+            code == 401 || details.contains("Unauthorized", ignoreCase = true) ->
                 "API-Key ungültig. Bitte in den Einstellungen prüfen."
-            details.contains("403") || details.contains("Forbidden", ignoreCase = true) ->
+            code == 403 || details.contains("Forbidden", ignoreCase = true) ->
                 "Keine Berechtigung. Domain oder API-Key prüfen."
             details.contains("Missing `html` or `text`", ignoreCase = true) ||
                 details.contains("Missing html or text", ignoreCase = true) ->
                 "E-Mail-Text fehlt. Bitte erneut versuchen."
-            details.contains("422") || details.contains("validation", ignoreCase = true) ->
+            code == 422 || details.contains("validation", ignoreCase = true) ->
                 "Ungültige Anfrage. Absender- und Empfänger-Adresse prüfen."
-            details.contains("429") ->
+            code == 429 ->
                 "Zu viele Anfragen. Bitte kurz warten und erneut versuchen."
             details.contains("Unable to resolve host", ignoreCase = true) ||
                 details.contains("UnknownHost", ignoreCase = true) ||
@@ -37,6 +38,10 @@ object ResendErrorMapper {
             else ->
                 "Senden fehlgeschlagen. Tippe auf „Details kopieren“ für technische Infos."
         }
+        val message = if (code != null) "$base (HTTP $code)" else base
         return UserFacingError(message = message, details = details)
     }
+
+    private fun httpCode(details: String): Int? =
+        httpStatus.find(details)?.groupValues?.get(1)?.toIntOrNull()
 }

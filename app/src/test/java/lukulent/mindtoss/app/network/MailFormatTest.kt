@@ -54,4 +54,16 @@ class MailFormatTest {
     fun permanentFailure_notOnNetwork() {
         assertFalse(ResendErrorMapper.isPermanentFailure("Unable to resolve host"))
     }
+
+    @Test
+    fun map_includesHttpCodeInMessage() {
+        val mapped = ResendErrorMapper.map("HTTP 422: {\"message\":\"validation_error\"}")
+        assertTrue(mapped.message.contains("HTTP 422"))
+    }
+
+    @Test
+    fun map_omitsHttpCodeForNetworkErrors() {
+        val mapped = ResendErrorMapper.map("Unable to resolve host api.resend.com")
+        assertFalse(mapped.message.contains("HTTP"))
+    }
 }
