@@ -82,5 +82,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.aboutlibraries.compose.m3)
 
+    testImplementation(libs.junit)
+
     debugImplementation(libs.compose.ui.tooling)
 }

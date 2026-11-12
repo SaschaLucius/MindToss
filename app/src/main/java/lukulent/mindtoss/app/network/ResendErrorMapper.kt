@@ -7,6 +7,15 @@ data class UserFacingError(
 
 object ResendErrorMapper {
 
+    private val httpStatus = Regex("""HTTP (\d{3})""")
+
+    /** Client errors that will not succeed on retry. 429 is excluded so the queue backs off. */
+    fun isPermanentFailure(raw: String?): Boolean {
+        val details = raw ?: return false
+        val code = httpStatus.find(details)?.groupValues?.get(1)?.toIntOrNull() ?: return false
+        return code in 400..499 && code != 429
+    }
+
     fun map(raw: String?): UserFacingError {
         val details = raw?.takeIf { it.isNotBlank() } ?: "Unbekannter Fehler"
         val message = when {
