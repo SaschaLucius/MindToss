@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 import lukulent.mindtoss.app.data.HistoryRepository
 import lukulent.mindtoss.app.data.SettingsRepository
 import lukulent.mindtoss.app.data.model.SendStatus
+import lukulent.mindtoss.app.network.MailFormat
 import lukulent.mindtoss.app.network.ResendApi
 import java.util.concurrent.TimeUnit
 
@@ -23,11 +24,13 @@ class SendMailWorker(
 
     override suspend fun doWork(): Result {
         val to = inputData.getString("to") ?: return Result.failure()
-        val subject = inputData.getString("subject") ?: return Result.failure()
-        val body = inputData.getString("body") ?: return Result.failure()
-        val messageType = inputData.getString("message_type") ?: "NOTE"
-        val content = inputData.getString("content") ?: ""
-        val historyId = inputData.getString("history_id") ?: ""
+        val historyId = inputData.getString("history_id") ?: return Result.failure()
+
+        val historyRepo = HistoryRepository(applicationContext)
+        val entry = historyRepo.getEntry(historyId)
+        if (entry == null) {
+            return Result.failure()
+        }
 
         val settingsRepo = SettingsRepository(applicationContext)
         val apiKey = settingsRepo.apiKey.first()
@@ -35,21 +38,19 @@ class SendMailWorker(
 
         if (apiKey.isBlank()) return Result.failure()
 
+        val parts = MailFormat.subjectAndBody(entry.content)
         val result = ResendApi.sendEmail(
             apiKey = apiKey,
             from = from,
             to = to,
-            subject = subject,
-            body = body,
+            subject = parts.subject,
+            body = parts.body,
         )
 
         return if (result.isSuccess) {
-            if (historyId.isNotBlank()) {
-                val historyRepo = HistoryRepository(applicationContext)
-                val resendId = result.getOrNull()
-                historyRepo.updateEntry(historyId) {
-                    it.copy(status = SendStatus.SUCCESS, resendId = resendId)
-                }
+            val resendId = result.getOrNull()
+            historyRepo.updateEntry(historyId) {
+                it.copy(status = SendStatus.SUCCESS, resendId = resendId)
             }
             Result.success()
         } else {
@@ -61,18 +62,10 @@ class SendMailWorker(
         fun enqueue(
             context: Context,
             to: String,
-            subject: String,
-            body: String,
-            content: String,
-            messageType: lukulent.mindtoss.app.data.model.MessageType,
             historyId: String,
         ) {
             val data = workDataOf(
                 "to" to to,
-                "subject" to subject,
-                "body" to body,
-                "content" to content,
-                "message_type" to messageType.name,
                 "history_id" to historyId,
             )
 

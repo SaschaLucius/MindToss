@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -53,6 +54,10 @@ class HistoryRepository(private val context: Context) {
             val current = decodeList(prefs[HISTORY_JSON])
             prefs[HISTORY_JSON] = json.encodeToString(current.map { if (it.id == id) transform(it) else it })
         }
+    }
+
+    suspend fun getEntry(id: String): HistoryEntry? {
+        return history.first().find { it.id == id }
     }
 
     suspend fun clearAll() {

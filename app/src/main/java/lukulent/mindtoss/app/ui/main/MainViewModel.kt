@@ -237,10 +237,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         SendMailWorker.enqueue(
                             context = getApplication(),
                             to = recipient,
-                            subject = parts.subject,
-                            body = parts.body,
-                            content = chunk,
-                            messageType = type,
                             historyId = historyId,
                         )
                     }
