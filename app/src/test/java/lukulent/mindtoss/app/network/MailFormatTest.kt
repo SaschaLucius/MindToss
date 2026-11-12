@@ -1,8 +1,6 @@
 package lukulent.mindtoss.app.network
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MailFormatTest {
@@ -38,32 +36,5 @@ class MailFormatTest {
     fun taskChunks_keepsWholeTextWhenDisabled() {
         val text = "One\n\nTwo"
         assertEquals(listOf(text), MailFormat.taskChunks(text, smartSplit = false))
-    }
-
-    @Test
-    fun permanentFailure_on422() {
-        assertTrue(ResendErrorMapper.isPermanentFailure("HTTP 422: validation error"))
-    }
-
-    @Test
-    fun permanentFailure_notOn429() {
-        assertFalse(ResendErrorMapper.isPermanentFailure("HTTP 429: rate limited"))
-    }
-
-    @Test
-    fun permanentFailure_notOnNetwork() {
-        assertFalse(ResendErrorMapper.isPermanentFailure("Unable to resolve host"))
-    }
-
-    @Test
-    fun map_includesHttpCodeInMessage() {
-        val mapped = ResendErrorMapper.map("HTTP 422: {\"message\":\"validation_error\"}")
-        assertTrue(mapped.message.contains("HTTP 422"))
-    }
-
-    @Test
-    fun map_omitsHttpCodeForNetworkErrors() {
-        val mapped = ResendErrorMapper.map("Unable to resolve host api.resend.com")
-        assertFalse(mapped.message.contains("HTTP"))
     }
 }

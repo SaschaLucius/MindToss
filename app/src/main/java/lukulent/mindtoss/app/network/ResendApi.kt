@@ -56,6 +56,7 @@ object ResendApi {
         return try {
             val response = client.post("https://api.resend.com/emails") {
                 header(HttpHeaders.Authorization, "Bearer $apiKey")
+                header(HttpHeaders.UserAgent, "MindToss/Android")
                 contentType(ContentType.Application.Json)
                 setBody(
                     SendEmailRequest(
@@ -85,6 +86,7 @@ object ResendApi {
         return try {
             val response = client.get("https://api.resend.com/emails/$emailId") {
                 header(HttpHeaders.Authorization, "Bearer $apiKey")
+                header(HttpHeaders.UserAgent, "MindToss/Android")
             }
             if (response.status.isSuccess()) {
                 val parsed = json.decodeFromString<EmailStatus>(response.bodyAsText())
