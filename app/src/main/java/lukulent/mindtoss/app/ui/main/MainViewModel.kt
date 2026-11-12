@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -12,12 +13,14 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import lukulent.mindtoss.app.data.HistoryRepository
 import lukulent.mindtoss.app.data.SettingsRepository
+import lukulent.mindtoss.app.data.ShareInbox
 import lukulent.mindtoss.app.data.model.HistoryEntry
 import lukulent.mindtoss.app.data.model.MessageType
 import lukulent.mindtoss.app.data.model.SendStatus
@@ -39,16 +42,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _draftText = MutableStateFlow("")
     val draftText: StateFlow<String> = _draftText.asStateFlow()
 
+    private val draftToSave = MutableSharedFlow<String>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    private var localDraftGeneration = 0L
+    private var savedDraftGeneration = 0L
+
     init {
         viewModelScope.launch {
             _draftText.value = settingsRepo.draft.first()
+            drainShareInbox()
+            ShareInbox.signal.collect { drainShareInbox() }
         }
-        // Pick up external draft changes (e.g. share intent)
+        viewModelScope.launch {
+            draftToSave.collectLatest { text ->
+                val generation = localDraftGeneration
+                settingsRepo.setDraft(text)
+                savedDraftGeneration = generation
+            }
+        }
+        // Pick up external draft replaces (e.g. "edit" from history) when not mid-typing.
         viewModelScope.launch {
             settingsRepo.draft.collect { stored ->
+                if (localDraftGeneration != savedDraftGeneration) return@collect
                 if (stored != _draftText.value) {
                     _draftText.value = stored
                 }
+            }
+        }
+        viewModelScope.launch {
+            val workManager = androidx.work.WorkManager.getInstance(application)
+            workManager.getWorkInfosByTagFlow("send_mail").collect { workInfos ->
+                hasPendingWork.value = workInfos.any { !it.state.isFinished }
             }
         }
     }
@@ -75,29 +101,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Pending work count for queue indicator
     val hasPendingWork = MutableStateFlow(false)
 
-    init {
-        viewModelScope.launch {
-            val workManager = androidx.work.WorkManager.getInstance(application)
-            workManager.getWorkInfosByTagFlow("send_mail").collect { workInfos ->
-                hasPendingWork.value = workInfos.any { !it.state.isFinished }
-            }
-        }
-    }
-
     fun updateDraft(text: String) {
         _draftText.value = text
-        viewModelScope.launch {
-            settingsRepo.setDraft(text)
-        }
+        localDraftGeneration++
+        draftToSave.tryEmit(text)
     }
 
     fun appendToDraft(text: String) {
         val current = _draftText.value
         val newText = if (current.isBlank()) text else "$current\n$text"
-        _draftText.value = newText
-        viewModelScope.launch {
-            settingsRepo.setDraft(newText)
-        }
+        updateDraft(newText)
+    }
+
+    private fun drainShareInbox() {
+        val addition = ShareInbox.poll() ?: return
+        val current = _draftText.value
+        val newText = if (current.isBlank()) addition else "$current\n\n$addition"
+        updateDraft(newText)
     }
 
     fun clearError() {

@@ -17,6 +17,7 @@ import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import lukulent.mindtoss.app.data.SettingsRepository
+import lukulent.mindtoss.app.data.ShareInbox
 import lukulent.mindtoss.app.network.TitleFetcher
 import lukulent.mindtoss.app.ui.licenses.LicensesScreen
 import lukulent.mindtoss.app.ui.main.MainScreen
@@ -84,13 +85,8 @@ class MainActivity : ComponentActivity() {
             } else {
                 sharedText
             }
-            val currentDraft = settingsRepo.draft.first()
-            val newDraft = if (currentDraft.isBlank()) {
-                processedText
-            } else {
-                "$currentDraft\n\n$processedText"
-            }
-            settingsRepo.setDraft(newDraft)
+            // ViewModel merges into the live draft (and persists). Survives until drained.
+            ShareInbox.offer(processedText)
         }
     }
 
