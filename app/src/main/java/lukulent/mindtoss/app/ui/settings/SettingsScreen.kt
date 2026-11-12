@@ -78,7 +78,14 @@ fun SettingsScreen(
     val history by viewModel.history.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showApiKey by remember { mutableStateOf(false) }
+    var historyQuery by remember { mutableStateOf("") }
     val view = LocalView.current
+    val filteredHistory = remember(history, historyQuery) {
+        val q = historyQuery.trim()
+        val sorted = history.sortedByDescending { it.timestamp }
+        if (q.isEmpty()) sorted
+        else sorted.filter { it.content.contains(q, ignoreCase = true) }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.message.collect {
@@ -243,6 +250,18 @@ fun SettingsScreen(
                 }
             }
 
+            if (history.isNotEmpty()) {
+                item {
+                    OutlinedTextField(
+                        value = historyQuery,
+                        onValueChange = { historyQuery = it },
+                        label = { Text("Suchen") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                    )
+                }
+            }
+
             if (history.isEmpty()) {
                 item {
                     Text(
@@ -251,10 +270,18 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            } else if (filteredHistory.isEmpty()) {
+                item {
+                    Text(
+                        "Keine Treffer",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             items(
-                items = history.sortedByDescending { it.timestamp },
+                items = filteredHistory,
                 key = { it.id },
             ) { entry ->
                 HistoryItem(
