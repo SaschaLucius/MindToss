@@ -96,7 +96,7 @@ class MainActivity : ComponentActivity() {
 
         // Single line that is just a URL
         if (lines.size == 1 && urlRegex.matches(text.trim())) {
-            val url = text.trim()
+            val url = TitleFetcher.sanitizeUrl(text.trim())
             // Prefer EXTRA_SUBJECT if available, otherwise fetch title
             val title = subject?.takeIf { it.isNotBlank() } ?: TitleFetcher.fetchTitle(url)
             return if (title != null) "$title\n$url" else url
@@ -120,11 +120,11 @@ class MainActivity : ComponentActivity() {
 
         var result = text
         for (match in matches.reversed()) {
-            val url = match.value
+            val url = TitleFetcher.sanitizeUrl(match.value)
             val title = TitleFetcher.fetchTitle(url)
             if (title != null) {
                 result = result.substring(0, match.range.first) +
-                    "$title\n${match.value}" +
+                    "$title\n$url" +
                     result.substring(match.range.last + 1)
             }
         }
