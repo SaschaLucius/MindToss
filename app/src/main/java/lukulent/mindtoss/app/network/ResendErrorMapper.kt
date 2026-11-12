@@ -16,7 +16,7 @@ object ResendErrorMapper {
                 "Keine Berechtigung. Domain oder API-Key prüfen."
             details.contains("422") || details.contains("validation", ignoreCase = true) ->
                 "Ungültige Anfrage. Absender- und Empfänger-Adresse prüfen."
-            details.contains("429") || details.contains("rate", ignoreCase = true) ->
+            details.contains("429") ->
                 "Zu viele Anfragen. Bitte kurz warten und erneut versuchen."
             details.contains("Unable to resolve host", ignoreCase = true) ||
                 details.contains("UnknownHost", ignoreCase = true) ||
