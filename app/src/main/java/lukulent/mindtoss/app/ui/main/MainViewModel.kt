@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -21,6 +22,8 @@ import lukulent.mindtoss.app.data.model.HistoryEntry
 import lukulent.mindtoss.app.data.model.MessageType
 import lukulent.mindtoss.app.data.model.SendStatus
 import lukulent.mindtoss.app.network.ResendApi
+import lukulent.mindtoss.app.network.ResendErrorMapper
+import lukulent.mindtoss.app.network.UserFacingError
 import lukulent.mindtoss.app.worker.SendMailWorker
 import java.util.UUID
 
@@ -49,11 +52,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val taskRecipient = settingsRepo.taskRecipient
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
+    val isConfigured = combine(settingsRepo.apiKey, settingsRepo.noteRecipient) { key, recipient ->
+        key.isNotBlank() && recipient.isNotBlank()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     private val _isSending = MutableStateFlow(false)
     val isSending: StateFlow<Boolean> = _isSending.asStateFlow()
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
+    private val _error = MutableStateFlow<UserFacingError?>(null)
+    val error: StateFlow<UserFacingError?> = _error.asStateFlow()
 
     private val _sendSuccess = MutableSharedFlow<Unit>()
     val sendSuccess: SharedFlow<Unit> = _sendSuccess.asSharedFlow()
@@ -106,7 +113,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             if (apiKey.isBlank() || noteRecipient.isBlank()) {
                 val errorMsg = "Bitte konfiguriere zuerst die Resend-Einstellungen"
-                _error.value = errorMsg
+                _error.value = UserFacingError(errorMsg, errorMsg)
                 historyRepo.addEntry(
                     HistoryEntry(
                         id = UUID.randomUUID().toString(),
@@ -126,8 +133,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             if (recipient.isBlank()) {
-                val errorMsg = "Kein Empfänger konfiguriert"
-                _error.value = errorMsg
+                val errorMsg = "Kein Empfänger für Aufgaben konfiguriert"
+                _error.value = UserFacingError(errorMsg, errorMsg)
                 historyRepo.addEntry(
                     HistoryEntry(
                         id = UUID.randomUUID().toString(),
@@ -217,8 +224,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _draftText.value = ""
                 _sendSuccess.emit(Unit)
             } else {
-                val errorMsg = errors.joinToString("\n")
-                _error.value = errorMsg
+                val mapped = ResendErrorMapper.map(errors.joinToString("\n"))
+                _error.value = mapped
                 historyRepo.addEntry(
                     HistoryEntry(
                         id = UUID.randomUUID().toString(),
@@ -226,7 +233,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         timestamp = System.currentTimeMillis(),
                         type = type,
                         status = SendStatus.FAILED,
-                        errorMessage = errorMsg,
+                        errorMessage = mapped.message,
                     )
                 )
             }
@@ -237,6 +244,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val cm = getApplication<Application>().getSystemService(ConnectivityManager::class.java)
         val network = cm.activeNetwork ?: return false
         val caps = cm.getNetworkCapabilities(network) ?: return false
-        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 }

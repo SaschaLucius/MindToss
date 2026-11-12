@@ -42,18 +42,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.view.HapticFeedbackConstants
 import lukulent.mindtoss.app.data.model.HistoryEntry
 import lukulent.mindtoss.app.data.model.MessageType
 import lukulent.mindtoss.app.data.model.SendStatus
@@ -79,9 +78,13 @@ fun SettingsScreen(
     val history by viewModel.history.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showApiKey by remember { mutableStateOf(false) }
+    val view = LocalView.current
 
     LaunchedEffect(Unit) {
-        viewModel.message.collect { snackbarHostState.showSnackbar(it) }
+        viewModel.message.collect {
+            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            snackbarHostState.showSnackbar(it)
+        }
     }
 
     Scaffold(
@@ -121,7 +124,7 @@ fun SettingsScreen(
                             Icon(
                                 if (showApiKey) Icons.Default.VisibilityOff
                                 else Icons.Default.Visibility,
-                                contentDescription = null,
+                                contentDescription = if (showApiKey) "API-Key verbergen" else "API-Key anzeigen",
                             )
                         }
                     },
@@ -157,7 +160,7 @@ fun SettingsScreen(
                 OutlinedTextField(
                     value = taskRecipient,
                     onValueChange = { viewModel.updateTaskRecipient(it) },
-                    label = { Text("Empfänger – Tasks (optional)") },
+                    label = { Text("Empfänger – Aufgaben (optional)") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
@@ -187,10 +190,14 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        "Smart Task Split (Leerzeilen = separate Tasks)",
-                        modifier = Modifier.weight(1f),
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Aufgaben aufteilen")
+                        Text(
+                            "Leerzeilen trennen in separate Aufgaben-Mails",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     Switch(
                         checked = smartTaskSplit,
                         onCheckedChange = { viewModel.updateSmartTaskSplit(it) },
@@ -348,7 +355,7 @@ private fun HistoryItem(
                         "opened" -> "\uD83D\uDC40 Gelesen"
                         "clicked" -> "\uD83D\uDD17 Geklickt"
                         "delivered" -> "\uD83D\uDCEC Zugestellt"
-                        "bounced" -> "\u26A0\uFE0F Bounce"
+                        "bounced" -> "\u26A0\uFE0F Abgewiesen"
                         else -> entry.lastEvent
                     }
                     Text(

@@ -1,6 +1,7 @@
 package lukulent.mindtoss.app
 
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -31,6 +32,9 @@ class MainActivity : ComponentActivity() {
 
         handleShareIntent(intent)
 
+        val previewSuccess = intent.getBooleanExtra("preview_success", false) &&
+            (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+
         setContent {
             val settingsRepo = remember { SettingsRepository(applicationContext) }
             val theme by settingsRepo.theme.collectAsStateWithLifecycle(initialValue = "system")
@@ -44,6 +48,7 @@ class MainActivity : ComponentActivity() {
                             onNavigateToSettings = { navController.navigate("settings") },
                             onCloseApp = { finishAffinity() },
                             viewModel = viewModel,
+                            previewSuccessOverlay = previewSuccess,
                         )
                     }
                     composable("settings") {

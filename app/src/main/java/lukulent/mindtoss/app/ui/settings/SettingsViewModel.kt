@@ -22,6 +22,7 @@ import lukulent.mindtoss.app.data.model.HistoryEntry
 import lukulent.mindtoss.app.data.model.MessageType
 import lukulent.mindtoss.app.data.model.SendStatus
 import lukulent.mindtoss.app.network.ResendApi
+import lukulent.mindtoss.app.network.ResendErrorMapper
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -130,9 +131,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 historyRepo.updateEntry(entry.id) { it.copy(status = SendStatus.SUCCESS, errorMessage = null, timestamp = System.currentTimeMillis(), resendId = resendId, lastEvent = null) }
                 _message.emit("Erneut gesendet")
             } else {
-                val errorMsg = result.exceptionOrNull()?.message ?: "Unbekannter Fehler"
-                historyRepo.updateEntry(entry.id) { it.copy(status = SendStatus.FAILED, errorMessage = errorMsg, timestamp = System.currentTimeMillis()) }
-                _message.emit("Fehler: $errorMsg")
+                val mapped = ResendErrorMapper.map(result.exceptionOrNull()?.message)
+                historyRepo.updateEntry(entry.id) { it.copy(status = SendStatus.FAILED, errorMessage = mapped.message, timestamp = System.currentTimeMillis()) }
+                _message.emit(mapped.message)
             }
         }
     }
