@@ -23,9 +23,12 @@ class HistoryRepository(private val context: Context) {
     private val json = Json { ignoreUnknownKeys = true }
 
     val history: Flow<List<HistoryEntry>> = context.historyDataStore.data.map { prefs ->
-        val raw = prefs[HISTORY_JSON] ?: "[]"
-        try {
-            json.decodeFromString<List<HistoryEntry>>(raw)
+        decodeList(prefs[HISTORY_JSON])
+    }
+
+    private fun decodeList(raw: String?): List<HistoryEntry> {
+        return try {
+            json.decodeFromString<List<HistoryEntry>>(raw ?: "[]")
         } catch (_: Exception) {
             emptyList()
         }
@@ -33,33 +36,21 @@ class HistoryRepository(private val context: Context) {
 
     suspend fun addEntry(entry: HistoryEntry) {
         context.historyDataStore.edit { prefs ->
-            val current = try {
-                json.decodeFromString<List<HistoryEntry>>(prefs[HISTORY_JSON] ?: "[]")
-            } catch (_: Exception) {
-                emptyList()
-            }
+            val current = decodeList(prefs[HISTORY_JSON])
             prefs[HISTORY_JSON] = json.encodeToString(current + entry)
         }
     }
 
     suspend fun removeEntry(id: String) {
         context.historyDataStore.edit { prefs ->
-            val current = try {
-                json.decodeFromString<List<HistoryEntry>>(prefs[HISTORY_JSON] ?: "[]")
-            } catch (_: Exception) {
-                emptyList()
-            }
+            val current = decodeList(prefs[HISTORY_JSON])
             prefs[HISTORY_JSON] = json.encodeToString(current.filter { it.id != id })
         }
     }
 
     suspend fun updateEntry(id: String, transform: (HistoryEntry) -> HistoryEntry) {
         context.historyDataStore.edit { prefs ->
-            val current = try {
-                json.decodeFromString<List<HistoryEntry>>(prefs[HISTORY_JSON] ?: "[]")
-            } catch (_: Exception) {
-                emptyList()
-            }
+            val current = decodeList(prefs[HISTORY_JSON])
             prefs[HISTORY_JSON] = json.encodeToString(current.map { if (it.id == id) transform(it) else it })
         }
     }
