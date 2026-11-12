@@ -2,12 +2,19 @@ package lukulent.mindtoss.app
 
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -24,6 +31,9 @@ import lukulent.mindtoss.app.ui.main.MainScreen
 import lukulent.mindtoss.app.ui.main.MainViewModel
 import lukulent.mindtoss.app.ui.settings.SettingsScreen
 import lukulent.mindtoss.app.ui.theme.MindTossTheme
+import lukulent.mindtoss.app.update.ReleaseInfo
+import lukulent.mindtoss.app.update.fetchLatestRelease
+import lukulent.mindtoss.app.update.isNewerVersion
 
 class MainActivity : ComponentActivity() {
 
@@ -36,10 +46,21 @@ class MainActivity : ComponentActivity() {
         val previewSuccess = intent.getBooleanExtra("preview_success", false) &&
             (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
+        @Suppress("DEPRECATION")
+        val currentVersion = packageManager.getPackageInfo(packageName, 0).versionName ?: "0"
+
         setContent {
             val settingsRepo = remember { SettingsRepository(applicationContext) }
             val theme by settingsRepo.theme.collectAsStateWithLifecycle(initialValue = "system")
             val navController = rememberNavController()
+            var updateInfo by remember { mutableStateOf<ReleaseInfo?>(null) }
+
+            LaunchedEffect(Unit) {
+                val release = fetchLatestRelease()
+                if (release != null && isNewerVersion(release.tagName, currentVersion)) {
+                    updateInfo = release
+                }
+            }
 
             MindTossTheme(themeMode = theme) {
                 NavHost(navController = navController, startDestination = "main") {
@@ -62,6 +83,33 @@ class MainActivity : ComponentActivity() {
                     composable("licenses") {
                         LicensesScreen(onBack = { navController.popBackStack() })
                     }
+                }
+
+                updateInfo?.let { release ->
+                    AlertDialog(
+                        onDismissRequest = { updateInfo = null },
+                        title = { Text("Update verfügbar") },
+                        text = {
+                            Text("Version ${release.tagName} ist verfügbar. Jetzt herunterladen?")
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    startActivity(
+                                        Intent(Intent.ACTION_VIEW, Uri.parse(release.downloadUrl)),
+                                    )
+                                    updateInfo = null
+                                },
+                            ) {
+                                Text("Herunterladen")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { updateInfo = null }) {
+                                Text("Später")
+                            }
+                        },
+                    )
                 }
             }
         }
