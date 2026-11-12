@@ -107,11 +107,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         if (!resendInFlight.compareAndSet(false, true)) return
         viewModelScope.launch {
             try {
-                val apiKeyVal = apiKey.first()
+                val apiKeyVal = settingsRepo.apiKey.first()
                 val senderVal = settingsRepo.effectiveSenderEmail.first()
                 val recipient = when (entry.type) {
-                    MessageType.NOTE -> noteRecipient.first()
-                    MessageType.TASK -> taskRecipient.first()
+                    MessageType.NOTE -> settingsRepo.noteRecipient.first()
+                    MessageType.TASK -> settingsRepo.taskRecipient.first()
                 }
 
                 if (apiKeyVal.isBlank() || recipient.isBlank()) {
@@ -147,7 +147,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun refreshEmailStatus(entry: HistoryEntry) {
         val resendId = entry.resendId ?: return
         viewModelScope.launch {
-            val apiKeyVal = apiKey.first()
+            val apiKeyVal = settingsRepo.apiKey.first()
             if (apiKeyVal.isBlank()) return@launch
             val result = ResendApi.retrieveEmail(apiKey = apiKeyVal, emailId = resendId)
             if (result.isSuccess) {
