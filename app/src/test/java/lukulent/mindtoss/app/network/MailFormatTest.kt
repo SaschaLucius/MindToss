@@ -15,10 +15,17 @@ class MailFormatTest {
     }
 
     @Test
-    fun subjectAndBody_singleLineHasEmptyBody() {
+    fun subjectAndBody_singleLineUsesSubjectAsBody() {
         val parts = MailFormat.subjectAndBody("Only subject")
         assertEquals("Only subject", parts.subject)
-        assertEquals("", parts.body)
+        assertEquals("Only subject", parts.body)
+    }
+
+    @Test
+    fun subjectAndBody_blankSecondLineFallsBackToSubject() {
+        val parts = MailFormat.subjectAndBody("Title\n\n")
+        assertEquals("Title", parts.subject)
+        assertEquals("Title", parts.body)
     }
 
     @Test

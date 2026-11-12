@@ -23,6 +23,9 @@ object ResendErrorMapper {
                 "API-Key ungültig. Bitte in den Einstellungen prüfen."
             details.contains("403") || details.contains("Forbidden", ignoreCase = true) ->
                 "Keine Berechtigung. Domain oder API-Key prüfen."
+            details.contains("Missing `html` or `text`", ignoreCase = true) ||
+                details.contains("Missing html or text", ignoreCase = true) ->
+                "E-Mail-Text fehlt. Bitte erneut versuchen."
             details.contains("422") || details.contains("validation", ignoreCase = true) ->
                 "Ungültige Anfrage. Absender- und Empfänger-Adresse prüfen."
             details.contains("429") ->

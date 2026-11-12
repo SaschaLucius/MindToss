@@ -7,7 +7,10 @@ object MailFormat {
     fun subjectAndBody(text: String): Parts {
         val lines = text.lines()
         val subject = lines.first()
-        val body = lines.drop(1).joinToString("\n")
+        val rest = lines.drop(1).joinToString("\n")
+        // Resend requires a non-empty text/html body. Single-line notes have no
+        // "rest", so fall back to the subject instead of sending "".
+        val body = rest.ifBlank { subject }
         return Parts(subject = subject, body = body)
     }
 
