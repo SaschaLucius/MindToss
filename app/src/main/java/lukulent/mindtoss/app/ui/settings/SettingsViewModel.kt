@@ -21,6 +21,7 @@ import lukulent.mindtoss.app.data.SettingsRepository
 import lukulent.mindtoss.app.data.model.HistoryEntry
 import lukulent.mindtoss.app.data.model.MessageType
 import lukulent.mindtoss.app.data.model.SendStatus
+import lukulent.mindtoss.app.network.MailFormat
 import lukulent.mindtoss.app.network.ResendApi
 import lukulent.mindtoss.app.network.ResendErrorMapper
 
@@ -114,16 +115,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 return@launch
             }
 
-            val lines = entry.content.lines()
-            val subject = lines.first()
-            val body = entry.content
+            val parts = MailFormat.subjectAndBody(entry.content)
 
             val result = ResendApi.sendEmail(
                 apiKey = apiKeyVal,
                 from = senderVal,
                 to = recipient,
-                subject = subject,
-                body = body,
+                subject = parts.subject,
+                body = parts.body,
             )
 
             if (result.isSuccess) {

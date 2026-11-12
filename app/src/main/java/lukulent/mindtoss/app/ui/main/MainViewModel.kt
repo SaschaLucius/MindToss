@@ -21,6 +21,7 @@ import lukulent.mindtoss.app.data.SettingsRepository
 import lukulent.mindtoss.app.data.model.HistoryEntry
 import lukulent.mindtoss.app.data.model.MessageType
 import lukulent.mindtoss.app.data.model.SendStatus
+import lukulent.mindtoss.app.network.MailFormat
 import lukulent.mindtoss.app.network.ResendApi
 import lukulent.mindtoss.app.network.ResendErrorMapper
 import lukulent.mindtoss.app.network.UserFacingError
@@ -148,12 +149,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            // Split into chunks if smart task split is enabled and sending as task
-            val chunks = if (smartSplit && type == MessageType.TASK) {
-                text.split(Regex("\n\\s*\n")).map { it.trim() }.filter { it.isNotBlank() }
-            } else {
-                listOf(text)
-            }
+            val chunks = MailFormat.taskChunks(text, smartSplit && type == MessageType.TASK)
 
             _isSending.value = true
             _error.value = null
@@ -162,9 +158,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val resendIds = mutableListOf<String>()
 
             for (chunk in chunks) {
-                val lines = chunk.lines()
-                val subject = lines.first()
-                val body = chunk
+                val parts = MailFormat.subjectAndBody(chunk)
+                val subject = parts.subject
+                val body = parts.body
 
                 if (isOnline()) {
                     val result = ResendApi.sendEmail(
