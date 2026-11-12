@@ -14,8 +14,8 @@ android {
         applicationId = "lukulent.mindtoss.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = (findProperty("versionCode") as? String)?.toIntOrNull() ?: 1
+        versionName = (findProperty("versionName") as? String) ?: "1.0.0"
     }
 
     signingConfigs {
