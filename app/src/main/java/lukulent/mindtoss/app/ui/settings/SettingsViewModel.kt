@@ -24,11 +24,13 @@ import lukulent.mindtoss.app.data.model.SendStatus
 import lukulent.mindtoss.app.network.MailFormat
 import lukulent.mindtoss.app.network.ResendApi
 import lukulent.mindtoss.app.network.ResendErrorMapper
+import java.util.concurrent.atomic.AtomicBoolean
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val settingsRepo = SettingsRepository(application)
     private val historyRepo = HistoryRepository(application)
+    private val resendInFlight = AtomicBoolean(false)
 
     private val _apiKey = MutableStateFlow("")
     val apiKey: StateFlow<String> = _apiKey.asStateFlow()
@@ -102,37 +104,42 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun resendHistoryEntry(entry: HistoryEntry) {
+        if (!resendInFlight.compareAndSet(false, true)) return
         viewModelScope.launch {
-            val apiKeyVal = apiKey.first()
-            val senderVal = settingsRepo.effectiveSenderEmail.first()
-            val recipient = when (entry.type) {
-                MessageType.NOTE -> noteRecipient.first()
-                MessageType.TASK -> taskRecipient.first()
-            }
+            try {
+                val apiKeyVal = apiKey.first()
+                val senderVal = settingsRepo.effectiveSenderEmail.first()
+                val recipient = when (entry.type) {
+                    MessageType.NOTE -> noteRecipient.first()
+                    MessageType.TASK -> taskRecipient.first()
+                }
 
-            if (apiKeyVal.isBlank() || recipient.isBlank()) {
-                _message.emit("Fehlende Konfiguration")
-                return@launch
-            }
+                if (apiKeyVal.isBlank() || recipient.isBlank()) {
+                    _message.emit("Fehlende Konfiguration")
+                    return@launch
+                }
 
-            val parts = MailFormat.subjectAndBody(entry.content)
+                val parts = MailFormat.subjectAndBody(entry.content)
 
-            val result = ResendApi.sendEmail(
-                apiKey = apiKeyVal,
-                from = senderVal,
-                to = recipient,
-                subject = parts.subject,
-                body = parts.body,
-            )
+                val result = ResendApi.sendEmail(
+                    apiKey = apiKeyVal,
+                    from = senderVal,
+                    to = recipient,
+                    subject = parts.subject,
+                    body = parts.body,
+                )
 
-            if (result.isSuccess) {
-                val resendId = result.getOrNull()
-                historyRepo.updateEntry(entry.id) { it.copy(status = SendStatus.SUCCESS, errorMessage = null, timestamp = System.currentTimeMillis(), resendId = resendId, lastEvent = null) }
-                _message.emit("Erneut gesendet")
-            } else {
-                val mapped = ResendErrorMapper.map(result.exceptionOrNull()?.message)
-                historyRepo.updateEntry(entry.id) { it.copy(status = SendStatus.FAILED, errorMessage = mapped.message, timestamp = System.currentTimeMillis()) }
-                _message.emit(mapped.message)
+                if (result.isSuccess) {
+                    val resendId = result.getOrNull()
+                    historyRepo.updateEntry(entry.id) { it.copy(status = SendStatus.SUCCESS, errorMessage = null, timestamp = System.currentTimeMillis(), resendId = resendId, lastEvent = null) }
+                    _message.emit("Erneut gesendet")
+                } else {
+                    val mapped = ResendErrorMapper.map(result.exceptionOrNull()?.message)
+                    historyRepo.updateEntry(entry.id) { it.copy(status = SendStatus.FAILED, errorMessage = mapped.message, timestamp = System.currentTimeMillis()) }
+                    _message.emit(mapped.message)
+                }
+            } finally {
+                resendInFlight.set(false)
             }
         }
     }

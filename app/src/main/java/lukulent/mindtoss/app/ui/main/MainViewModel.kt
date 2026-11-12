@@ -27,8 +27,11 @@ import lukulent.mindtoss.app.network.ResendErrorMapper
 import lukulent.mindtoss.app.network.UserFacingError
 import lukulent.mindtoss.app.worker.SendMailWorker
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val sendInFlight = AtomicBoolean(false)
 
     private val settingsRepo = SettingsRepository(application)
     private val historyRepo = HistoryRepository(application)
@@ -102,136 +105,140 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun send(type: MessageType) {
+        if (!sendInFlight.compareAndSet(false, true)) return
         viewModelScope.launch {
-            val text = draftText.value.trim()
-            if (text.isBlank()) return@launch
-
-            val apiKey = settingsRepo.apiKey.first()
-            val senderEmail = settingsRepo.effectiveSenderEmail.first()
-            val noteRecipient = settingsRepo.noteRecipient.first()
-            val taskRecip = settingsRepo.taskRecipient.first()
-            val smartSplit = settingsRepo.smartTaskSplit.first()
-
-            if (apiKey.isBlank() || noteRecipient.isBlank()) {
-                val errorMsg = "Bitte konfiguriere zuerst die Resend-Einstellungen"
-                _error.value = UserFacingError(errorMsg, errorMsg)
-                historyRepo.addEntry(
-                    HistoryEntry(
-                        id = UUID.randomUUID().toString(),
-                        content = text,
-                        timestamp = System.currentTimeMillis(),
-                        type = type,
-                        status = SendStatus.FAILED,
-                        errorMessage = errorMsg,
-                    )
-                )
-                return@launch
-            }
-
-            val recipient = when (type) {
-                MessageType.NOTE -> noteRecipient
-                MessageType.TASK -> taskRecip
-            }
-
-            if (recipient.isBlank()) {
-                val errorMsg = "Kein Empfänger für Aufgaben konfiguriert"
-                _error.value = UserFacingError(errorMsg, errorMsg)
-                historyRepo.addEntry(
-                    HistoryEntry(
-                        id = UUID.randomUUID().toString(),
-                        content = text,
-                        timestamp = System.currentTimeMillis(),
-                        type = type,
-                        status = SendStatus.FAILED,
-                        errorMessage = errorMsg,
-                    )
-                )
-                return@launch
-            }
-
-            val chunks = MailFormat.taskChunks(text, smartSplit && type == MessageType.TASK)
-
             _isSending.value = true
             _error.value = null
-            val errors = mutableListOf<String>()
-            var allQueued = false
-            val resendIds = mutableListOf<String>()
+            try {
+                val text = draftText.value.trim()
+                if (text.isBlank()) return@launch
 
-            for (chunk in chunks) {
-                val parts = MailFormat.subjectAndBody(chunk)
-                val subject = parts.subject
-                val body = parts.body
+                val apiKey = settingsRepo.apiKey.first()
+                val senderEmail = settingsRepo.effectiveSenderEmail.first()
+                val noteRecipient = settingsRepo.noteRecipient.first()
+                val taskRecip = settingsRepo.taskRecipient.first()
+                val smartSplit = settingsRepo.smartTaskSplit.first()
 
-                if (isOnline()) {
-                    val result = ResendApi.sendEmail(
-                        apiKey = apiKey,
-                        from = senderEmail,
-                        to = recipient,
-                        subject = subject,
-                        body = body,
-                    )
-                    if (result.isSuccess) {
-                        resendIds.add(result.getOrThrow())
-                    } else {
-                        errors.add(result.exceptionOrNull()?.message ?: "Unbekannter Fehler")
-                    }
-                } else {
-                    allQueued = true
-                    val historyId = UUID.randomUUID().toString()
+                if (apiKey.isBlank() || noteRecipient.isBlank()) {
+                    val errorMsg = "Bitte konfiguriere zuerst die Resend-Einstellungen"
+                    _error.value = UserFacingError(errorMsg, errorMsg)
                     historyRepo.addEntry(
                         HistoryEntry(
-                            id = historyId,
-                            content = chunk,
+                            id = UUID.randomUUID().toString(),
+                            content = text,
                             timestamp = System.currentTimeMillis(),
                             type = type,
-                            status = SendStatus.QUEUED,
+                            status = SendStatus.FAILED,
+                            errorMessage = errorMsg,
                         )
                     )
-                    SendMailWorker.enqueue(
-                        context = getApplication(),
-                        to = recipient,
-                        subject = subject,
-                        body = body,
-                        content = chunk,
-                        messageType = type,
-                        historyId = historyId,
+                    return@launch
+                }
+
+                val recipient = when (type) {
+                    MessageType.NOTE -> noteRecipient
+                    MessageType.TASK -> taskRecip
+                }
+
+                if (recipient.isBlank()) {
+                    val errorMsg = "Kein Empfänger für Aufgaben konfiguriert"
+                    _error.value = UserFacingError(errorMsg, errorMsg)
+                    historyRepo.addEntry(
+                        HistoryEntry(
+                            id = UUID.randomUUID().toString(),
+                            content = text,
+                            timestamp = System.currentTimeMillis(),
+                            type = type,
+                            status = SendStatus.FAILED,
+                            errorMessage = errorMsg,
+                        )
+                    )
+                    return@launch
+                }
+
+                val chunks = MailFormat.taskChunks(text, smartSplit && type == MessageType.TASK)
+
+                val errors = mutableListOf<String>()
+                var allQueued = false
+                val resendIds = mutableListOf<String>()
+
+                for (chunk in chunks) {
+                    val parts = MailFormat.subjectAndBody(chunk)
+                    val subject = parts.subject
+                    val body = parts.body
+
+                    if (isOnline()) {
+                        val result = ResendApi.sendEmail(
+                            apiKey = apiKey,
+                            from = senderEmail,
+                            to = recipient,
+                            subject = subject,
+                            body = body,
+                        )
+                        if (result.isSuccess) {
+                            resendIds.add(result.getOrThrow())
+                        } else {
+                            errors.add(result.exceptionOrNull()?.message ?: "Unbekannter Fehler")
+                        }
+                    } else {
+                        allQueued = true
+                        val historyId = UUID.randomUUID().toString()
+                        historyRepo.addEntry(
+                            HistoryEntry(
+                                id = historyId,
+                                content = chunk,
+                                timestamp = System.currentTimeMillis(),
+                                type = type,
+                                status = SendStatus.QUEUED,
+                            )
+                        )
+                        SendMailWorker.enqueue(
+                            context = getApplication(),
+                            to = recipient,
+                            subject = subject,
+                            body = body,
+                            content = chunk,
+                            messageType = type,
+                            historyId = historyId,
+                        )
+                    }
+                }
+
+                if (allQueued) {
+                    settingsRepo.setDraft("")
+                    _draftText.value = ""
+                    _queued.emit(Unit)
+                } else if (errors.isEmpty()) {
+                    historyRepo.addEntry(
+                        HistoryEntry(
+                            id = UUID.randomUUID().toString(),
+                            content = text,
+                            timestamp = System.currentTimeMillis(),
+                            type = type,
+                            status = SendStatus.SUCCESS,
+                            resendId = resendIds.firstOrNull(),
+                        )
+                    )
+                    settingsRepo.setDraft("")
+                    _draftText.value = ""
+                    _sendSuccess.emit(Unit)
+                } else {
+                    val mapped = ResendErrorMapper.map(errors.joinToString("\n"))
+                    _error.value = mapped
+                    historyRepo.addEntry(
+                        HistoryEntry(
+                            id = UUID.randomUUID().toString(),
+                            content = text,
+                            timestamp = System.currentTimeMillis(),
+                            type = type,
+                            status = SendStatus.FAILED,
+                            errorMessage = mapped.message,
+                        )
                     )
                 }
-            }
-
-            _isSending.value = false
-
-            if (allQueued) {
-                settingsRepo.setDraft("")
-                _draftText.value = ""
-                _queued.emit(Unit)
-            } else if (errors.isEmpty()) {
-                historyRepo.addEntry(
-                    HistoryEntry(
-                        id = UUID.randomUUID().toString(),
-                        content = text,
-                        timestamp = System.currentTimeMillis(),
-                        type = type,
-                        status = SendStatus.SUCCESS,
-                        resendId = resendIds.firstOrNull(),
-                    )
-                )
-                settingsRepo.setDraft("")
-                _draftText.value = ""
-                _sendSuccess.emit(Unit)
-            } else {
-                val mapped = ResendErrorMapper.map(errors.joinToString("\n"))
-                _error.value = mapped
-                historyRepo.addEntry(
-                    HistoryEntry(
-                        id = UUID.randomUUID().toString(),
-                        content = text,
-                        timestamp = System.currentTimeMillis(),
-                        type = type,
-                        status = SendStatus.FAILED,
-                        errorMessage = mapped.message,
-                    )
-                )
+            } finally {
+                _isSending.value = false
+                sendInFlight.set(false)
             }
         }
     }
