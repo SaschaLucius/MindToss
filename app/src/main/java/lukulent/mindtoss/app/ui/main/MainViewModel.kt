@@ -178,30 +178,52 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 val chunks = MailFormat.taskChunks(text, smartSplit && type == MessageType.TASK)
 
-                val errors = mutableListOf<String>()
-                var allQueued = false
-                val resendIds = mutableListOf<String>()
+                var queuedAny = false
+                var sentAny = false
+                var failedAt: Int? = null
+                var failRaw: String? = null
 
-                for (chunk in chunks) {
+                for ((index, chunk) in chunks.withIndex()) {
                     val parts = MailFormat.subjectAndBody(chunk)
-                    val subject = parts.subject
-                    val body = parts.body
 
                     if (isOnline()) {
                         val result = ResendApi.sendEmail(
                             apiKey = apiKey,
                             from = senderEmail,
                             to = recipient,
-                            subject = subject,
-                            body = body,
+                            subject = parts.subject,
+                            body = parts.body,
                         )
                         if (result.isSuccess) {
-                            resendIds.add(result.getOrThrow())
+                            sentAny = true
+                            historyRepo.addEntry(
+                                HistoryEntry(
+                                    id = UUID.randomUUID().toString(),
+                                    content = chunk,
+                                    timestamp = System.currentTimeMillis(),
+                                    type = type,
+                                    status = SendStatus.SUCCESS,
+                                    resendId = result.getOrNull(),
+                                )
+                            )
                         } else {
-                            errors.add(result.exceptionOrNull()?.message ?: "Unbekannter Fehler")
+                            failedAt = index
+                            failRaw = result.exceptionOrNull()?.message ?: "Unbekannter Fehler"
+                            val mapped = ResendErrorMapper.map(failRaw)
+                            historyRepo.addEntry(
+                                HistoryEntry(
+                                    id = UUID.randomUUID().toString(),
+                                    content = chunk,
+                                    timestamp = System.currentTimeMillis(),
+                                    type = type,
+                                    status = SendStatus.FAILED,
+                                    errorMessage = mapped.message,
+                                )
+                            )
+                            break
                         }
                     } else {
-                        allQueued = true
+                        queuedAny = true
                         val historyId = UUID.randomUUID().toString()
                         historyRepo.addEntry(
                             HistoryEntry(
@@ -215,8 +237,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         SendMailWorker.enqueue(
                             context = getApplication(),
                             to = recipient,
-                            subject = subject,
-                            body = body,
+                            subject = parts.subject,
+                            body = parts.body,
                             content = chunk,
                             messageType = type,
                             historyId = historyId,
@@ -224,37 +246,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
 
-                if (allQueued) {
-                    settingsRepo.setDraft("")
-                    _draftText.value = ""
-                    _queued.emit(Unit)
-                } else if (errors.isEmpty()) {
-                    historyRepo.addEntry(
-                        HistoryEntry(
-                            id = UUID.randomUUID().toString(),
-                            content = text,
-                            timestamp = System.currentTimeMillis(),
-                            type = type,
-                            status = SendStatus.SUCCESS,
-                            resendId = resendIds.firstOrNull(),
-                        )
-                    )
-                    settingsRepo.setDraft("")
-                    _draftText.value = ""
-                    _sendSuccess.emit(Unit)
+                if (failedAt != null) {
+                    updateDraft(chunks.drop(failedAt).joinToString("\n\n"))
+                    _error.value = ResendErrorMapper.map(failRaw)
                 } else {
-                    val mapped = ResendErrorMapper.map(errors.joinToString("\n"))
-                    _error.value = mapped
-                    historyRepo.addEntry(
-                        HistoryEntry(
-                            id = UUID.randomUUID().toString(),
-                            content = text,
-                            timestamp = System.currentTimeMillis(),
-                            type = type,
-                            status = SendStatus.FAILED,
-                            errorMessage = mapped.message,
-                        )
-                    )
+                    updateDraft("")
+                    if (queuedAny) {
+                        _queued.emit(Unit)
+                    } else if (sentAny) {
+                        _sendSuccess.emit(Unit)
+                    }
                 }
             } finally {
                 _isSending.value = false
